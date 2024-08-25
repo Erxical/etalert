@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/services/api.dart';
 import 'package:frontend/services/data/user/create_user.dart';
-import 'package:frontend/services/maps/get_distance_matrix.dart';
+import 'package:frontend/services/data/user/login.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -15,6 +16,8 @@ class SignInWithGoogle {
       }
       final statusCodeRes = await createUser(
           user.id, user.email, user.displayName, user.photoUrl);
+      final tokens = await login(user.id);
+      Api.setToken(tokens!.accessToken);
       if (statusCodeRes == 208) {
         context.go('/');
       } else {
