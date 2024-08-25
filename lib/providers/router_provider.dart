@@ -13,10 +13,7 @@ import 'package:go_router/go_router.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(initialLocation: '/login', routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const Calendar(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => Calendar()),
     GoRoute(
       path: '/login',
       builder: (context, state) => const Login(),
