@@ -16,13 +16,6 @@ class SignInWithGoogle {
       final statusCodeRes = await createUser(
           user.id, user.email, user.displayName, user.photoUrl);
       if (statusCodeRes == 208) {
-        final distance = await getDistanceMatrix(
-            13.6512522,
-            100.4938679,
-            13.7457749,
-            100.5318268,
-            DateTime.parse('2024-08-26 02:30:00Z').toLocal());
-        print(distance);
         context.go('/');
       } else {
         context.go('/name/${user.id}');

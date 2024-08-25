@@ -9,9 +9,9 @@ Future<dynamic> getDistanceMatrix(double startLatitude, double startLongitude,
     final isStartUtc = startDate.isUtc;
     final arrivalTime = arriveTime.difference(startDate).inSeconds;
     final isArriveUtc = arriveTime.isUtc;
-    print('Start Date: $startDate and is UTC? $isStartUtc');
-    print('Arrive Time: $arriveTime and is UTC? $isArriveUtc');
-    print('Arrival Time: $arrivalTime');
+    // print('Start Date: $startDate and is UTC? $isStartUtc');
+    // print('Arrive Time: $arriveTime and is UTC? $isArriveUtc');
+    // print('Arrival Time: $arrivalTime');
     final response = await Api.dio.get(
         'https://maps.googleapis.com/maps/api/distancematrix/json?destinations=$endLatitude,$endLongitude&origins=$startLatitude,$startLongitude&mode=driving&key=$api');
 
