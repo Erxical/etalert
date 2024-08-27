@@ -13,9 +13,9 @@ class Login {
 
   factory Login.fromJson(Map<String, dynamic> json) {
     return Login(
-        accessToken: json['AccessToken'],
-        refreshToken: json['RefreshToken'],
-        accessTokenExpired: json['AccessTokenExpired'],
-        refreshTokenExpired: json['RefreshTokenExpired']);
+        accessToken: json['accessToken'],
+        refreshToken: json['refreshToken'],
+        accessTokenExpired: json['expired'],
+        refreshTokenExpired: json['refreshExpired']);
   }
 }

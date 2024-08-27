@@ -1,3 +1,4 @@
+import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/models/user/user_info.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -34,6 +35,19 @@ class _CalendarState extends State<Calendar> {
   //     });
   //   }
   // }
+
+  void setAlarm(int id, DateTime dateTime, String title, String body) async {
+    await Alarm.init();
+    final alarmSetting = AlarmSettings(
+        id: id,
+        dateTime: dateTime,
+        assetAudioPath: 'assets/alarm.mp3',
+        notificationTitle: title,
+        notificationBody: body,
+        loopAudio: true,
+        enableNotificationOnKill: true);
+    await Alarm.set(alarmSettings: alarmSetting);
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -17,7 +17,7 @@ class SignInWithGoogle {
       final statusCodeRes = await createUser(
           user.id, user.email, user.displayName, user.photoUrl);
       final tokens = await login(user.id);
-      Api.setToken(tokens!.accessToken);
+      await Api.setToken(tokens!.accessToken);
       if (statusCodeRes == 208) {
         context.go('/');
       } else {
