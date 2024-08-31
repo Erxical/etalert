@@ -62,105 +62,113 @@ class _BedtimeState extends State<Bedtime> {
           ),
         ),
       ),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(right: 16.0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 0.0), // Set padding to 0
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.bed,
-                              color: colorScheme.primary,
-                              size: 32.0,
-                            ),
-                            onPressed: () => selectTime(true),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          controller: bedtimeController,
-                          onTap: () => selectTime(true),
-                          decoration: InputDecoration(
-                            labelText: 'Bedtime',
-                            labelStyle: TextStyle(color: colorScheme.onSurface),
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16.0),
-                  Text(
-                    'To',
-                    style: TextStyle(
-                      fontSize: 18.0,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 16.0),
-                  Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(right: 16.0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 0.0), // Set padding to 0
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.alarm,
-                              color: colorScheme.primary,
-                              size: 32.0,
-                            ),
-                            onPressed: () => selectTime(true),
-                          ),
-                        ), // Add the Icon here
-                      ),
-                      Expanded(
-                        child: TextField(
-                          controller: wakeupController,
-                          onTap: () => selectTime(false),
-                          decoration: InputDecoration(
-                            labelText: 'Wake Up Time',
-                            labelStyle: TextStyle(color: colorScheme.onSurface),
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Padding(
               padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  _createBedtime();
-                  context.push('/preference/${widget.googleId}');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 0.0), // Set padding to 0
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.bed,
+                                color: colorScheme.primary,
+                                size: 32.0,
+                              ),
+                              onPressed: () => selectTime(true),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: bedtimeController,
+                            onTap: () => selectTime(true),
+                            decoration: InputDecoration(
+                              labelText: 'Bedtime',
+                              labelStyle: TextStyle(color: colorScheme.primary),
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16.0),
+                    Text(
+                      'To',
+                      style: TextStyle(
+                        fontSize: 18.0,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 16.0),
+                    Row(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 0.0), // Set padding to 0
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.alarm,
+                                color: colorScheme.primary,
+                                size: 32.0,
+                              ),
+                              onPressed: () => selectTime(true),
+                            ),
+                          ), // Add the Icon here
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: wakeupController,
+                            onTap: () => selectTime(false),
+                            decoration: InputDecoration(
+                              labelText: 'Wake Up Time',
+                              labelStyle: TextStyle(color: colorScheme.primary),
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                child: const Text('Next'),
               ),
             ),
-          ),
-        ],
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          _createBedtime();
+                          context.push('/preference/${widget.googleId}');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                        ),
+                        child: const Text('Next'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

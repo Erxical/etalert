@@ -66,104 +66,111 @@ class _NameSetupState extends State<NameSetup> {
             )),
           )
         : Scaffold(
-            body: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: SizedBox(
-                      width: width,
-                      height: height,
-                      child: Form(
-                        key: formKey,
-                        child: Container(
-                          margin: const EdgeInsets.only(
-                            top: 110,
-                            bottom: 50,
-                            left: 30,
-                            right: 30,
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Welcome to ETAlert!',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontSize: 36,
+            body: SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: SizedBox(
+                        width: width,
+                        height: height,
+                        child: Form(
+                          key: formKey,
+                          child: Container(
+                            margin: const EdgeInsets.only(
+                              top: 50,
+                              left: 16,
+                              right: 16,
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Welcome to ETAlert!',
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    fontSize: 36,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(
-                                height: 26,
-                              ),
-                              RoundedImage(url: data!.image),
-                              const SizedBox(
-                                height: 50,
-                              ),
-                              TextFormField(
-                                controller: nameController,
-                                decoration: InputDecoration(
-                                    labelStyle: TextStyle(
+                                const SizedBox(
+                                  height: 26,
+                                ),
+                                RoundedImage(url: data!.image),
+                                const SizedBox(
+                                  height: 50,
+                                ),
+                                TextFormField(
+                                  controller: nameController,
+                                  decoration: InputDecoration(
+                                      labelStyle: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary),
+                                      enabledBorder: OutlineInputBorder(
+                                          borderSide: BorderSide(
                                         color: Theme.of(context)
                                             .colorScheme
-                                            .primary),
-                                    enabledBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    )),
-                                    border: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary)),
-                                    label: const Text('Name'),
-                                    helperText:
-                                        'This will be your display name',
-                                    helperStyle: TextStyle(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    )),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter a name';
-                                  }
-                                  return null;
-                                },
-                                // initialValue: data?.name ?? "",
-                              )
-                            ],
+                                            .primary,
+                                      )),
+                                      border: OutlineInputBorder(
+                                          borderSide: BorderSide(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary)),
+                                      label: const Text('Name'),
+                                      helperText:
+                                          'This will be your display name',
+                                      helperStyle: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      )),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter a name';
+                                    }
+                                    return null;
+                                  },
+                                  // initialValue: data?.name ?? "",
+                                )
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+            bottomNavigationBar: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                          onPressed: () {
+                            updateName();
+                            context.push('/bedtime/${widget.googleId}');
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            // padding: const EdgeInsets.symmetric(
+                            //     vertical: 20, horizontal: 70),
+                          ),
+                          child: Text(
+                            'Next',
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                fontWeight: FontWeight.bold),
+                          )),
+                    ),
+                  ],
                 ),
-                Container(
-                    margin: const EdgeInsets.symmetric(
-                        vertical: 50, horizontal: 30),
-                    child: Form(
-                        child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        FilledButton(
-                            onPressed: () {
-                              updateName();
-                              context.push('/bedtime/${widget.googleId}');
-                            },
-                            style: FilledButton.styleFrom(
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 20, horizontal: 70)),
-                            child: Text(
-                              'Next',
-                              style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface),
-                            )),
-                      ],
-                    ))),
-              ],
+              ),
             ),
           );
   }
