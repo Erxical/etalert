@@ -93,9 +93,8 @@ class _BedtimeState extends State<Bedtime> {
                           onTap: () => selectTime(true),
                           decoration: InputDecoration(
                             labelText: 'Bedtime',
-                            labelStyle:
-                                TextStyle(color: colorScheme.onBackground),
-                            border: OutlineInputBorder(),
+                            labelStyle: TextStyle(color: colorScheme.onSurface),
+                            border: const OutlineInputBorder(),
                           ),
                         ),
                       ),
@@ -106,7 +105,7 @@ class _BedtimeState extends State<Bedtime> {
                     'To',
                     style: TextStyle(
                       fontSize: 18.0,
-                      color: colorScheme.onBackground,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 16.0),
@@ -133,9 +132,8 @@ class _BedtimeState extends State<Bedtime> {
                           onTap: () => selectTime(false),
                           decoration: InputDecoration(
                             labelText: 'Wake Up Time',
-                            labelStyle:
-                                TextStyle(color: colorScheme.onBackground),
-                            border: OutlineInputBorder(),
+                            labelStyle: TextStyle(color: colorScheme.onSurface),
+                            border: const OutlineInputBorder(),
                           ),
                         ),
                       ),
@@ -152,7 +150,7 @@ class _BedtimeState extends State<Bedtime> {
               child: ElevatedButton(
                 onPressed: () {
                   _createBedtime();
-                  context.go('/preference/${widget.googleId}');
+                  context.push('/preference/${widget.googleId}');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,

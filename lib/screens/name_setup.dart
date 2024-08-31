@@ -36,7 +36,7 @@ class _NameSetupState extends State<NameSetup> {
 
   @override
   Widget build(BuildContext context) {
-    final _formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
     final TextEditingController nameController =
         TextEditingController(text: data?.name);
 
@@ -49,8 +49,8 @@ class _NameSetupState extends State<NameSetup> {
       super.dispose();
     }
 
-    void _updateName() async {
-      if (_formKey.currentState!.validate()) {
+    void updateName() async {
+      if (formKey.currentState!.validate()) {
         await editUser(widget.googleId, nameController.text, data!.image);
         // Perform any other actions, like navigating to a different page or saving the name
       }
@@ -74,7 +74,7 @@ class _NameSetupState extends State<NameSetup> {
                       width: width,
                       height: height,
                       child: Form(
-                        key: _formKey,
+                        key: formKey,
                         child: Container(
                           margin: const EdgeInsets.only(
                             top: 110,
@@ -146,8 +146,8 @@ class _NameSetupState extends State<NameSetup> {
                       children: [
                         FilledButton(
                             onPressed: () {
-                              _updateName();
-                              context.go('/bedtime/${widget.googleId}');
+                              updateName();
+                              context.push('/bedtime/${widget.googleId}');
                             },
                             style: FilledButton.styleFrom(
                                 backgroundColor: Theme.of(context)
@@ -158,9 +158,8 @@ class _NameSetupState extends State<NameSetup> {
                             child: Text(
                               'Next',
                               style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onBackground),
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
                             )),
                       ],
                     ))),
