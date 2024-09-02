@@ -1,8 +1,27 @@
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:frontend/models/user/user_info.dart';
+import 'package:frontend/providers/router_provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:timeline_tile/timeline_tile.dart';
+
+Future<void> backgroundNotificationHandler(
+    NotificationResponse response) async {
+  final String? payload = response.payload;
+  if (payload != null) {
+    try {
+      int alarmId = int.parse(payload);
+      await Alarm.stop(alarmId);
+      print('Alarm with ID $alarmId stopped.');
+    } catch (e) {
+      print('Error stopping alarm: $e');
+    }
+  } else {
+    print('No payload found.');
+  }
+}
 
 class Calendar extends StatefulWidget {
   const Calendar({super.key});
@@ -17,35 +36,84 @@ class _CalendarState extends State<Calendar> {
   DateTime _focusedDay = DateTime.now();
   UserData? data;
   bool isLoading = false;
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   final Map<DateTime, List<Map<String, dynamic>>> _events = {};
 
   @override
   void initState() {
-    // _getData();
     super.initState();
+
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    final DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+      requestSoundPermission: true,
+      requestBadgePermission: true,
+      requestAlertPermission: true,
+    );
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
+    );
+
+    flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        final String? payload = response.payload;
+        if (payload != null) {
+          int alarmId = int.parse(payload);
+          await Alarm.stop(alarmId);
+
+          // Optionally, navigate to a specific screen if needed
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => Calendar()));
+        }
+      },
+      onDidReceiveBackgroundNotificationResponse:
+          backgroundNotificationHandler, // Use the top-level function here
+    );
+
+    Alarm.ringStream.stream.listen((alarmSettings) {
+      _showNotification(alarmSettings);
+    });
   }
 
-  // Future<void> _getData() async {
-  //   isLoading = true;
-  //   data = await getUserInfo(widget.googleId);
-  //   if (mounted) {
-  //     setState(() {
-  //       data;
-  //       isLoading = false;
-  //     });
-  //   }
-  // }
+  Future<void> _showNotification(AlarmSettings alarmSettings) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'your_channel_id',
+      'your_channel_name',
+      importance: Importance.max,
+      priority: Priority.high,
+      sound: RawResourceAndroidNotificationSound(
+          'mixkit_warning_alarm_buzzer_991'),
+    );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: DarwinNotificationDetails(),
+    );
+    await flutterLocalNotificationsPlugin.show(
+      alarmSettings.id,
+      alarmSettings.notificationTitle,
+      alarmSettings.notificationBody,
+      platformChannelSpecifics,
+      payload: alarmSettings.id.toString(), // Ensure the payload is correct
+    );
+  }
 
   void setAlarm(int id, DateTime dateTime, String title, String body) async {
     await Alarm.init();
     final alarmSetting = AlarmSettings(
-        id: id,
-        dateTime: dateTime,
-        assetAudioPath: 'assets/alarm.mp3',
-        notificationTitle: title,
-        notificationBody: body,
-        loopAudio: true,
-        enableNotificationOnKill: true);
+      id: id,
+      dateTime: dateTime,
+      assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
+      notificationTitle: title,
+      notificationBody: body,
+      loopAudio: true,
+      enableNotificationOnKill: true,
+    );
     await Alarm.set(alarmSettings: alarmSetting);
   }
 
@@ -130,6 +198,11 @@ class _CalendarState extends State<Calendar> {
           );
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   Widget _buildTimeline() {
     List<Map<String, dynamic>> events = _events[_selectedDay] ?? [];
 
@@ -206,7 +279,7 @@ class _CalendarState extends State<Calendar> {
           children: [
             TextField(
               controller: titleController,
-              decoration: const InputDecoration(hintText: "Scedule name"),
+              decoration: const InputDecoration(hintText: "Schedule name"),
             ),
             const SizedBox(height: 25),
             ElevatedButton(
@@ -245,11 +318,31 @@ class _CalendarState extends State<Calendar> {
                   'title': titleController.text,
                   'time': selectedTime,
                 };
+
                 if (_events[_selectedDay] != null) {
                   _events[_selectedDay]!.add(event);
                 } else {
                   _events[_selectedDay] = [event];
                 }
+
+                // Set the alarm
+                final DateTime selectedDateTime = DateTime(
+                  _selectedDay.year,
+                  _selectedDay.month,
+                  _selectedDay.day,
+                  selectedTime!.hour,
+                  selectedTime!.minute,
+                );
+
+                final int alarmId =
+                    _events[_selectedDay]!.length; // unique ID for each alarm
+
+                setAlarm(
+                  alarmId,
+                  selectedDateTime,
+                  titleController.text,
+                  'This is your reminder for ${titleController.text}',
+                );
               });
               Navigator.pop(context);
             },

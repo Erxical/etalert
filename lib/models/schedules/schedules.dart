@@ -1,9 +1,7 @@
 class Schedules {
-  final DateTime dateTime;
   final List<Schedule> schedules;
 
   Schedules({
-    required this.dateTime,
     required this.schedules,
   });
 
@@ -13,7 +11,6 @@ class Schedules {
         list.map((i) => Schedule.fromJson(i)).toList();
 
     return Schedules(
-      dateTime: json['dateTime'],
       schedules: scheduleList,
     );
   }
@@ -21,17 +18,35 @@ class Schedules {
 
 class Schedule {
   final String name;
-  final String location;
+  final String startTime;
+  final String endTime;
+  final bool isHaveEndTime;
+  final double latitude;
+  final double longtitude;
+  final bool isHaveLocation;
+  final bool isFirstSchedule;
 
   Schedule({
     required this.name,
-    required this.location,
+    required this.startTime,
+    required this.endTime,
+    required this.isHaveEndTime,
+    required this.latitude,
+    required this.longtitude,
+    required this.isHaveLocation,
+    required this.isFirstSchedule,
   });
 
   factory Schedule.fromJson(Map<String, dynamic> json) {
     return Schedule(
-      name: json['name'],
-      location: json['location'],
+      name: json['Name'],
+      startTime: json['StartTime'],
+      endTime: json['EndTime'],
+      isHaveEndTime: json['IsHaveEndTime'],
+      latitude: json['Latitude'],
+      longtitude: json['Longitude'],
+      isHaveLocation: json['IsHaveLocation'],
+      isFirstSchedule: json['IsFirstSchedule'],
     );
   }
 }
