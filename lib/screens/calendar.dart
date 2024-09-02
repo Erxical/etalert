@@ -1,8 +1,9 @@
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:frontend/models/schedules/schedules.dart';
 import 'package:frontend/models/user/user_info.dart';
-import 'package:frontend/providers/router_provider.dart';
+import 'package:frontend/services/data/schedules/get_schedules.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:timeline_tile/timeline_tile.dart';
@@ -24,7 +25,9 @@ Future<void> backgroundNotificationHandler(
 }
 
 class Calendar extends StatefulWidget {
-  const Calendar({super.key});
+  final String googleId;
+
+  const Calendar({super.key, required this.googleId});
 
   @override
   State<Calendar> createState() => _CalendarState();
@@ -46,13 +49,13 @@ class _CalendarState extends State<Calendar> {
 
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    final DarwinInitializationSettings initializationSettingsIOS =
+    const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
       requestSoundPermission: true,
       requestBadgePermission: true,
       requestAlertPermission: true,
     );
-    final InitializationSettings initializationSettings =
+    const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
@@ -67,8 +70,7 @@ class _CalendarState extends State<Calendar> {
           await Alarm.stop(alarmId);
 
           // Optionally, navigate to a specific screen if needed
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => Calendar()));
+          context.push('/');
         }
       },
       onDidReceiveBackgroundNotificationResponse:
@@ -115,6 +117,19 @@ class _CalendarState extends State<Calendar> {
       enableNotificationOnKill: true,
     );
     await Alarm.set(alarmSettings: alarmSetting);
+  }
+
+  Future<Schedules?> getScedule(DateTime date) async {
+    var dateTime = date.toLocal();
+    String preferredDate =
+        '${dateTime.day.toString().length == 1 ? '0${dateTime.day}' : '${dateTime.day}'}-${dateTime.month.toString().length == 1 ? '0${dateTime.month}' : '${dateTime.month}'}-${dateTime.year}';
+    final data = await getAllSchedules(widget.googleId, preferredDate);
+
+    print(data);
+    if (data != null) {
+      return data;
+    }
+    return null;
   }
 
   @override
