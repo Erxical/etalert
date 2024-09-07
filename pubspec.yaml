@@ -49,6 +49,9 @@ dependencies:
   timeline_tile: ^2.0.0
   geolocator: ^12.0.0
   alarm: ^3.1.5
+  google_maps_flutter: ^2.9.0
+  geocoding: ^3.0.0
+  flutter_typeahead: ^4.1.0
 
 dev_dependencies:
   flutter_test:
