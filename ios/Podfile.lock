@@ -36,6 +36,8 @@ PODS:
   - Flutter (1.0.0)
   - flutter_fgbg (0.0.1):
     - Flutter
+  - flutter_local_notifications (0.0.1):
+    - Flutter
   - flutter_keyboard_visibility (0.0.1):
     - Flutter
   - geocoding_ios (1.0.5):
@@ -98,6 +100,7 @@ DEPENDENCIES:
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - Flutter (from `Flutter`)
   - flutter_fgbg (from `.symlinks/plugins/flutter_fgbg/ios`)
+  - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_keyboard_visibility (from `.symlinks/plugins/flutter_keyboard_visibility/ios`)
   - geocoding_ios (from `.symlinks/plugins/geocoding_ios/ios`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/ios`)
@@ -133,6 +136,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_fgbg:
     :path: ".symlinks/plugins/flutter_fgbg/ios"
+  flutter_local_notifications:
+    :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_keyboard_visibility:
     :path: ".symlinks/plugins/flutter_keyboard_visibility/ios"
   geocoding_ios:
@@ -158,6 +163,7 @@ SPEC CHECKSUMS:
   FirebaseCoreInternal: 4b297a2d56063dbea2c1d0d04222d44a8d058862
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_fgbg: 31c0d1140a131daea2d342121808f6aa0dcd879d
+  flutter_local_notifications: 4cde75091f6327eb8517fa068a0a5950212d2086
   flutter_keyboard_visibility: 0339d06371254c3eb25eeb90ba8d17dca8f9c069
   geocoding_ios: d7460f56e80e118d57678efe5c2cdc888739ff18
   geolocator_apple: 6cbaf322953988e009e5ecb481f07efece75c450

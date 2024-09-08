@@ -20,8 +20,8 @@ class ScheduleCard extends StatelessWidget {
           ),
         ],
       ),
-      margin: EdgeInsets.symmetric(vertical: 8),
-      padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
       child: Text(
         name,
         style: TextStyle(color: Theme.of(context).colorScheme.onSurface),

@@ -3,7 +3,7 @@ import 'package:frontend/services/api.dart';
 Future<int?> createUser(
     String googleId, String email, String? name, String? image) async {
   try {
-    final response = await Api.dio.post("/users", data: {
+    final response = await Api.dio.post("/create-user", data: {
       "googleId": googleId,
       "email": email,
       "name": name ?? "",
