@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:frontend/services/maps/get_suggestions_location.dart';
 import 'package:frontend/services/maps/get_coordinates_from_place_id.dart';
