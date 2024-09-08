@@ -29,7 +29,8 @@ Future<void> backgroundNotificationHandler(
 }
 
 class Calendar extends StatefulWidget {
-  const Calendar({super.key});
+  final String googleId;
+  const Calendar({super.key, required this.googleId});
 
   @override
   State<Calendar> createState() => _CalendarState();
