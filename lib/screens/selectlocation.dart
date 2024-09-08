@@ -13,7 +13,7 @@ class SelectLocation extends StatefulWidget {
 
 class _SelectLocationState extends State<SelectLocation> {
   GoogleMapController? _mapController;
-  LatLng _selectedLatLng = LatLng(13.6512574, 100.4938679);
+  LatLng _selectedLatLng = LatLng(13.6512574, 100.4938679); // Default location
   Set<Marker> _markers = {};
   TextEditingController _searchController = TextEditingController();
 

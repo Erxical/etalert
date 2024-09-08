@@ -58,6 +58,7 @@ PODS:
   - GoogleMaps/Base (8.4.0)
   - GoogleMaps/Maps (8.4.0):
     - GoogleMaps/Base
+  - GooglePlaces (8.5.0)
   - GoogleSignIn (7.1.0):
     - AppAuth (< 2.0, >= 1.7.3)
     - GTMAppAuth (< 5.0, >= 4.1.1)
@@ -107,6 +108,7 @@ DEPENDENCIES:
   - google_maps_flutter_ios (from `.symlinks/plugins/google_maps_flutter_ios/ios`)
   - google_sign_in_ios (from `.symlinks/plugins/google_sign_in_ios/ios`)
   - GoogleMaps
+  - GooglePlaces
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
 
 SPEC REPOS:
@@ -119,6 +121,7 @@ SPEC REPOS:
     - FirebaseCoreInternal
     - Google-Maps-iOS-Utils
     - GoogleMaps
+    - GooglePlaces
     - GoogleSignIn
     - GoogleUtilities
     - GTMAppAuth
@@ -172,6 +175,7 @@ SPEC CHECKSUMS:
   google_maps_flutter_ios: e31555a04d1986ab130f2b9f24b6cdc861acc6d3
   google_sign_in_ios: 8115e3fbe097e6509beb819ed602d47369d9011f
   GoogleMaps: 8939898920281c649150e0af74aa291c60f2e77d
+  GooglePlaces: 426efb69051e7b460e16300ba63598687d10fa1a
   GoogleSignIn: d4281ab6cf21542b1cfaff85c191f230b399d2db
   GoogleUtilities: ea963c370a38a8069cc5f7ba4ca849a60b6d7d15
   GTMAppAuth: f69bd07d68cd3b766125f7e072c45d7340dea0de
@@ -180,6 +184,6 @@ SPEC CHECKSUMS:
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
   shared_preferences_foundation: fcdcbc04712aee1108ac7fda236f363274528f78
 
-PODFILE CHECKSUM: 0baa37e97af41d830e69d07efc99010da32c8615
+PODFILE CHECKSUM: 610b5d9bbd60847bbc02afe044e56ab17bef0a46
 
 COCOAPODS: 1.15.2
