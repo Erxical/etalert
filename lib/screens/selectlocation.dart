@@ -18,8 +18,9 @@ class _SelectLocationState extends State<SelectLocation> {
   TextEditingController _searchController = TextEditingController();
 
   List<String> _searchHistory = []; // List to store search history
+  String _selectedLocationName = ''; // Store the selected location name
 
-  // Method to get the name of the location from coordinates
+  // Method to get the name of the location from coordinates using reverse geocoding
   Future<String> _getLocationName(LatLng latLng) async {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -27,8 +28,8 @@ class _SelectLocationState extends State<SelectLocation> {
         latLng.longitude,
       );
       if (placemarks.isNotEmpty) {
-        return placemarks.first.name ??
-            '${latLng.latitude}, ${latLng.longitude}';
+        // Return the place name, locality, or formatted address
+        return placemarks.first.name ?? '${latLng.latitude}, ${latLng.longitude}';
       }
     } catch (e) {
       print('Error fetching location name: $e');
@@ -36,24 +37,36 @@ class _SelectLocationState extends State<SelectLocation> {
     return '${latLng.latitude}, ${latLng.longitude}';
   }
 
-  void _onMapTapped(LatLng latLng) {
+  // Handle map tap and reverse geocode the coordinates to a location name
+  void _onMapTapped(LatLng latLng) async {
+    String locationName = await _getLocationName(latLng);
     setState(() {
       _selectedLatLng = latLng;
+      _selectedLocationName = locationName;
       _markers.clear();
-      _markers.add(Marker(
-        markerId: MarkerId('selectedLocation'),
-        position: latLng,
-      ));
+      _markers.add(
+        Marker(
+          markerId: MarkerId('selectedLocation'),
+          position: latLng,
+          infoWindow: InfoWindow(
+            title: locationName,
+            snippet: "Tap here to select this location",
+            onTap: () {
+              // Confirm the selection when the InfoWindow is clicked
+              _confirmSelection(locationName);
+            },
+          ),
+        ),
+      );
     });
   }
 
-  // Modify this method to return the location name instead of coordinates
-  void _confirmSelection() async {
-    String locationName = await _getLocationName(_selectedLatLng);
-    Navigator.pop(context, locationName);
+  // Confirm the selected location and return the location name
+  void _confirmSelection(String locationName) {
+    Navigator.pop(context, locationName); // Return the selected location name
   }
 
-  // Add a method to update search history
+  // Update search history
   void _updateSearchHistory(String query) {
     if (!_searchHistory.contains(query) && query.isNotEmpty) {
       setState(() {
@@ -69,20 +82,7 @@ class _SelectLocationState extends State<SelectLocation> {
       );
       LatLng currentLatLng = LatLng(position.latitude, position.longitude);
 
-      setState(() {
-        _selectedLatLng = currentLatLng;
-        _markers.clear();
-        _markers.add(
-          Marker(
-            markerId: MarkerId('currentLocation'),
-            position: currentLatLng,
-          ),
-        );
-      });
-
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLng(currentLatLng),
-      );
+      _onMapTapped(currentLatLng); // Treat this like a map tap to get the location name
     } catch (e) {
       print('Error getting current location: $e');
     }
@@ -96,70 +96,78 @@ class _SelectLocationState extends State<SelectLocation> {
         actions: [
           IconButton(
             icon: Icon(Icons.check),
-            onPressed: _confirmSelection,
+            onPressed: () => _confirmSelection(_selectedLocationName), // Confirm the selected location
           ),
         ],
       ),
       body: Column(
         children: [
           Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TypeAheadField<String>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    labelText: 'Search location',
-                    border: OutlineInputBorder(),
-                  ),
+            padding: const EdgeInsets.all(8.0),
+            child: TypeAheadField<String>(
+              textFieldConfiguration: TextFieldConfiguration(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  labelText: 'Search location',
+                  border: OutlineInputBorder(),
                 ),
-                suggestionsCallback: (query) async {
-                  if (query.isEmpty) return [];
+              ),
+              suggestionsCallback: (query) async {
+                if (query.isEmpty) return [];
 
-                  // Fetch new suggestions from the API
-                  final apiSuggestions = await getSuggestions(query);
+                // Fetch new suggestions from the API
+                final apiSuggestions = await getSuggestions(query);
 
-                  // Filter search history based on the query
-                  final historySuggestions = _searchHistory
-                      .where((history) =>
-                          history.toLowerCase().contains(query.toLowerCase()))
-                      .toList();
+                // Filter search history based on the query
+                final historySuggestions = _searchHistory
+                    .where((history) =>
+                        history.toLowerCase().contains(query.toLowerCase()))
+                    .toList();
 
-                  // Map API suggestions to a list of descriptions
-                  final apiSuggestionsList = apiSuggestions
-                      .map((suggestion) => suggestion['description'] as String)
-                      .toList();
+                // Map API suggestions to a list of descriptions
+                final apiSuggestionsList = apiSuggestions
+                    .map((suggestion) => suggestion['description'] as String)
+                    .toList();
 
-                  // Combine search history and API suggestions, avoiding duplicates
-                  final combinedSuggestions = [
-                    ...historySuggestions,
-                    ...apiSuggestionsList.where((suggestion) =>
-                        !historySuggestions.contains(suggestion))
-                  ];
+                // Combine search history and API suggestions, avoiding duplicates
+                final combinedSuggestions = [
+                  ...historySuggestions,
+                  ...apiSuggestionsList.where((suggestion) =>
+                      !historySuggestions.contains(suggestion))
+                ];
 
-                  return combinedSuggestions;
-                },
-                itemBuilder: (context, suggestion) {
-                  return ListTile(
-                    leading: Icon(Icons.location_on),
-                    title: Text(suggestion),
-                  );
-                },
-                onSuggestionSelected: (suggestion) async {
-                  // Update search history with the selected suggestion
-                  _updateSearchHistory(suggestion);
+                return combinedSuggestions;
+              },
+              itemBuilder: (context, suggestion) {
+                return ListTile(
+                  leading: Icon(Icons.location_on),
+                  title: Text(suggestion),
+                );
+              },
+              onSuggestionSelected: (suggestion) async {
+                // Update search history with the selected suggestion
+                _updateSearchHistory(suggestion);
 
-                  // Select the suggestion and update the map location
-                  await selectSuggestion(
-                    suggestion,
-                    _mapController,
-                    setState,
-                    _markers,
-                  );
+                // Select the suggestion and update the map location
+                String? placeName = await selectSuggestion(
+                  suggestion,
+                  _mapController,
+                  setState,
+                  _markers,
+                );
 
-                  // Clear the search bar after selecting a suggestion
-                  _searchController.clear();
-                },
-              )),
+                // Update the selected location name
+                if (placeName != null) {
+                  setState(() {
+                    _selectedLocationName = placeName;
+                  });
+                }
+
+                // Clear the search bar after selecting a suggestion
+                _searchController.clear();
+              },
+            ),
+          ),
           Expanded(
             child: GoogleMap(
               onMapCreated: (controller) => _mapController = controller,
@@ -168,7 +176,7 @@ class _SelectLocationState extends State<SelectLocation> {
                 zoom: 14.0,
               ),
               markers: _markers,
-              onTap: _onMapTapped,
+              onTap: _onMapTapped, // Handle map tap to get location name
               myLocationEnabled: true,
               zoomControlsEnabled: true,
             ),
