@@ -5,6 +5,7 @@ import 'package:frontend/services/maps/select_suggestion.dart';
 import 'package:frontend/services/maps/get_suggestions_location.dart';
 import 'package:geocoding/geocoding.dart'; // Import geocoding package to get the location name
 import 'package:geolocator/geolocator.dart';
+import 'package:frontend/models/maps/location.dart';
 
 class SelectLocation extends StatefulWidget {
   @override
@@ -29,7 +30,8 @@ class _SelectLocationState extends State<SelectLocation> {
       );
       if (placemarks.isNotEmpty) {
         // Return the place name, locality, or formatted address
-        return placemarks.first.name ?? '${latLng.latitude}, ${latLng.longitude}';
+        return placemarks.first.name ??
+            '${latLng.latitude}, ${latLng.longitude}';
       }
     } catch (e) {
       print('Error fetching location name: $e');
@@ -53,7 +55,9 @@ class _SelectLocationState extends State<SelectLocation> {
             snippet: "Tap here to select this location",
             onTap: () {
               // Confirm the selection when the InfoWindow is clicked
-              _confirmSelection(locationName);
+              _confirmSelection(SelectedLocation(
+                  locationName: _selectedLocationName,
+                  selectedLatLng: _selectedLatLng));
             },
           ),
         ),
@@ -62,8 +66,9 @@ class _SelectLocationState extends State<SelectLocation> {
   }
 
   // Confirm the selected location and return the location name
-  void _confirmSelection(String locationName) {
-    Navigator.pop(context, locationName); // Return the selected location name
+  void _confirmSelection(SelectedLocation selectedLocation) {
+    Navigator.pop(
+        context, selectedLocation); // Return the selected location name
   }
 
   // Update search history
@@ -82,7 +87,8 @@ class _SelectLocationState extends State<SelectLocation> {
       );
       LatLng currentLatLng = LatLng(position.latitude, position.longitude);
 
-      _onMapTapped(currentLatLng); // Treat this like a map tap to get the location name
+      _onMapTapped(
+          currentLatLng); // Treat this like a map tap to get the location name
     } catch (e) {
       print('Error getting current location: $e');
     }
@@ -96,7 +102,11 @@ class _SelectLocationState extends State<SelectLocation> {
         actions: [
           IconButton(
             icon: Icon(Icons.check),
-            onPressed: () => _confirmSelection(_selectedLocationName), // Confirm the selected location
+            onPressed: () => _confirmSelection(
+              SelectedLocation(
+                  locationName: _selectedLocationName,
+                  selectedLatLng: _selectedLatLng),
+            ), // Confirm the selected location
           ),
         ],
       ),
@@ -132,8 +142,8 @@ class _SelectLocationState extends State<SelectLocation> {
                 // Combine search history and API suggestions, avoiding duplicates
                 final combinedSuggestions = [
                   ...historySuggestions,
-                  ...apiSuggestionsList.where((suggestion) =>
-                      !historySuggestions.contains(suggestion))
+                  ...apiSuggestionsList.where(
+                      (suggestion) => !historySuggestions.contains(suggestion))
                 ];
 
                 return combinedSuggestions;
