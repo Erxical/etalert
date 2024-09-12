@@ -46,6 +46,8 @@ class _CalendarState extends State<Calendar> {
       FlutterLocalNotificationsPlugin();
   // Updated to store a list of maps with detailed event info
   final Map<DateTime, List<Map<String, dynamic>>> _events = {};
+  TextEditingController originLocationController = TextEditingController();
+  LatLng? _originLatLng;
 
   GoogleMapController? mapController;
   LatLng _center = LatLng(13.6512574, 100.4938679);
@@ -129,7 +131,7 @@ class _CalendarState extends State<Calendar> {
       _center = LatLng(position.latitude, position.longitude);
       _marker.clear();
       _marker.add(Marker(
-        markerId: MarkerId('currentLocation'),
+        markerId: const MarkerId('currentLocation'),
         position: _center,
       ));
     });
@@ -143,20 +145,37 @@ class _CalendarState extends State<Calendar> {
   }
 
   Future<void> _selectSuggestion(String query) async {
-    List<Location> locations = await locationFromAddress(query);
-    if (locations.isNotEmpty) {
-      Location location = locations.first;
-      LatLng latLng = LatLng(location.latitude, location.longitude);
+    try {
+      List<Location> locations = await locationFromAddress(query);
+      if (locations.isNotEmpty) {
+        Location location = locations.first;
+        LatLng latLng = LatLng(location.latitude, location.longitude);
 
-      mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 14));
+        mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 14));
 
-      setState(() {
-        _marker.clear();
-        _marker.add(Marker(
-          markerId: MarkerId('searchedLocation'),
-          position: latLng,
-        ));
-      });
+        setState(() {
+          _marker.clear();
+          _marker.add(Marker(
+            markerId: const MarkerId('searchedLocation'),
+            position: latLng,
+          ));
+        });
+      } else {
+        // Handle geocoding failure
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Error: Could not find any result for the supplied address or coordinates.'),
+          ),
+        );
+      }
+    } catch (e) {
+      // Handle other exceptions
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An error occurred. Please try again later.'),
+        ),
+      );
     }
   }
 
@@ -183,7 +202,8 @@ class _CalendarState extends State<Calendar> {
     );
   }
 
-  void setAlarm(int id, DateTime dateTime, String title, String body) async {
+  Future<void> setAlarm(
+      int id, DateTime dateTime, String title, String body) async {
     await Alarm.init();
     final alarmSetting = AlarmSettings(
       id: id,
@@ -195,6 +215,7 @@ class _CalendarState extends State<Calendar> {
       enableNotificationOnKill: true,
     );
     await Alarm.set(alarmSettings: alarmSetting);
+    print('Alarm set for $dateTime with ID $id');
   }
 
   Future<Schedules?> getScedule(DateTime date) async {
@@ -312,6 +333,11 @@ class _CalendarState extends State<Calendar> {
           );
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   Widget _buildTimeline() {
     List<Map<String, dynamic>> events = _events[_selectedDay] ?? [];
 
@@ -417,6 +443,10 @@ class _CalendarState extends State<Calendar> {
           children: [
             Text('Date: ${event['date']}'),
             Text('Time: ${event['time'].format(context)}'),
+            Text(
+              'Origin Location: ${event['originLocation'] ?? 'No Origin Location'}',
+              style: const TextStyle(fontSize: 14.0),
+            ),
             const SizedBox(height: 16),
             // Text field for editing location
             TextField(
@@ -427,8 +457,9 @@ class _CalendarState extends State<Calendar> {
                     .colorScheme
                     .onSurface, // Adjust text color if needed
               ),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Location',
+                labelStyle: TextStyle(fontSize: 14.0),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -458,6 +489,41 @@ class _CalendarState extends State<Calendar> {
     );
   }
 
+  Future<void> _showMapDialog(BuildContext context, LatLng location) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: location,
+                zoom: 14.0,
+              ),
+              markers: {
+                Marker(
+                  markerId: MarkerId('userLocation'),
+                  position: location,
+                ),
+              },
+              myLocationEnabled: true,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _addEventDialog(BuildContext context) async {
     TextEditingController taskNameController = TextEditingController();
     TextEditingController dateController = TextEditingController(
@@ -465,6 +531,7 @@ class _CalendarState extends State<Calendar> {
     );
     TextEditingController timeController = TextEditingController();
     TextEditingController locationController = TextEditingController();
+    TextEditingController originLocationController = TextEditingController();
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -476,6 +543,21 @@ class _CalendarState extends State<Calendar> {
       ),
       borderRadius: BorderRadius.circular(8.0),
     );
+
+    // Get the user's current location
+    Position userLocation = await Geolocator.getCurrentPosition();
+    LatLng userLatLng = LatLng(userLocation.latitude, userLocation.longitude);
+
+    // Pre-set the origin location controller with the user's location
+    originLocationController.text = await placemarkFromCoordinates(
+            userLatLng.latitude, userLatLng.longitude)
+        .then((placemarks) {
+      if (placemarks.isNotEmpty) {
+        return placemarks[0].name ?? "";
+      } else {
+        return "Unknown Location";
+      }
+    });
 
     showDialog(
       context: context,
@@ -592,6 +674,37 @@ class _CalendarState extends State<Calendar> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
+                      controller: originLocationController,
+                      decoration: InputDecoration(
+                        border: customBorder,
+                        enabledBorder: customBorder,
+                        focusedBorder: customBorder,
+                        labelText: 'Origin Location',
+                        labelStyle: TextStyle(color: colorScheme.primary),
+                      ),
+                      onChanged: (text) {
+                        // Update the origin location when the text changes
+                        originLocationController.text = text;
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.map),
+                    onPressed: () async {
+                      Position userLocation = await Geolocator.getCurrentPosition();
+                      LatLng userLatLng = LatLng(userLocation.latitude, userLocation.longitude);
+                      _showMapDialog(context, userLatLng);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Icon(Icons.location_on, color: colorScheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
                       controller: locationController,
                       decoration: InputDecoration(
                         border: customBorder,
@@ -614,11 +727,11 @@ class _CalendarState extends State<Calendar> {
               const SizedBox(height: 32),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final taskName = taskNameController.text.isNotEmpty
                         ? taskNameController.text
                         : 'Unnamed Event';
-                    final date = dateController.text.isNotEmpty
+                    final dateString = dateController.text.isNotEmpty
                         ? dateController.text
                         : 'No date';
                     final timeString = timeController.text.isNotEmpty
@@ -629,21 +742,34 @@ class _CalendarState extends State<Calendar> {
                         : 'No location';
 
                     if (taskName.isNotEmpty &&
-                        date.isNotEmpty &&
+                        dateString.isNotEmpty &&
                         timeString.isNotEmpty &&
                         location.isNotEmpty) {
-                      // Parse the timeString back to TimeOfDay
+                      // Parse the date and time strings
+                      final date = DateTime.parse(dateString);
                       final timeParts = timeString.split(':');
                       final time = TimeOfDay(
                         hour: int.parse(timeParts[0]),
                         minute: int.parse(timeParts[1].split(' ')[0]),
                       );
 
+                      // Combine date and time
+                      final eventDateTime = DateTime(
+                        date.year,
+                        date.month,
+                        date.day,
+                        time.hour,
+                        time.minute,
+                      );
+
                       final eventDetails = {
                         'name': taskName,
-                        'date': date,
+                        'date': dateString,
                         'time': time, // Store TimeOfDay directly
                         'location': location,
+                        'originLocation': originLocationController.text,
+                        'originLatitude': _originLatLng?.latitude,
+                        'originLongitude': _originLatLng?.longitude,
                       };
 
                       setState(() {
@@ -653,6 +779,16 @@ class _CalendarState extends State<Calendar> {
                           _events[_selectedDay] = [eventDetails];
                         }
                       });
+
+                      // Set the alarm for the new event
+                      int alarmId = _events[_selectedDay]!
+                          .length; // unique ID for each alarm
+                      await setAlarm(
+                        alarmId,
+                        eventDateTime,
+                        taskName,
+                        'This is your reminder for $taskName',
+                      );
 
                       Navigator.pop(context);
                     }
@@ -677,5 +813,4 @@ class _CalendarState extends State<Calendar> {
 
     return selectedLocation;
   }
-
 }
