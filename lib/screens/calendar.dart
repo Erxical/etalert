@@ -1,6 +1,7 @@
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:frontend/models/maps/location.dart';
 import 'package:frontend/models/schedules/schedules.dart';
 import 'package:frontend/models/user/user_info.dart';
 import 'package:go_router/go_router.dart';
@@ -50,8 +51,9 @@ class _CalendarState extends State<Calendar> {
   LatLng? _originLatLng;
 
   GoogleMapController? mapController;
-  LatLng _center = LatLng(13.6512574, 100.4938679);
+  LatLng _center = const LatLng(13.6512574, 100.4938679);
   Set<Marker> _marker = {};
+  late SelectedLocation destinationLocation;
 
   @override
   void initState() {
@@ -359,7 +361,7 @@ class _CalendarState extends State<Calendar> {
       itemBuilder: (context, index) {
         final event = events[index];
         final time =
-            event['time'] as TimeOfDay? ?? TimeOfDay(hour: 0, minute: 0);
+            event['time'] as TimeOfDay? ?? const TimeOfDay(hour: 0, minute: 0);
         final title = event['name'] as String? ?? 'No Title';
         final location = event['location'] as String? ?? 'No Location';
 
@@ -421,7 +423,7 @@ class _CalendarState extends State<Calendar> {
           children: [
             Text(event['name'] ?? 'No name'),
             IconButton(
-              icon: Icon(Icons.delete), // Trash bin icon
+              icon: const Icon(Icons.delete), // Trash bin icon
               onPressed: () {
                 // Remove the event
                 setState(() {
@@ -574,7 +576,7 @@ class _CalendarState extends State<Calendar> {
               Align(
                 alignment: Alignment.topRight,
                 child: IconButton(
-                  icon: Icon(Icons.close),
+                  icon: const Icon(Icons.close),
                   onPressed: () {
                     Navigator.pop(context);
                   },
@@ -594,7 +596,7 @@ class _CalendarState extends State<Calendar> {
                 'Add your schedule.',
                 style: TextStyle(
                   fontSize: 16,
-                  color: colorScheme.onBackground,
+                  color: colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 32),
@@ -714,10 +716,15 @@ class _CalendarState extends State<Calendar> {
                         labelStyle: TextStyle(color: colorScheme.primary),
                       ),
                       onTap: () async {
-                        String? selectedLocation =
+                        SelectedLocation? selectedLocation =
                             await _selectLocation(context);
                         if (selectedLocation != null) {
-                          locationController.text = selectedLocation;
+                          locationController.text =
+                              selectedLocation.locationName ?? "";
+                          destinationLocation = selectedLocation;
+                          print(destinationLocation.locationName);
+                          print(destinationLocation.selectedLatLng!.latitude);
+                          print(destinationLocation.selectedLatLng!.longitude);
                         }
                       },
                     ),
@@ -803,8 +810,8 @@ class _CalendarState extends State<Calendar> {
     );
   }
 
-  Future<String?> _selectLocation(BuildContext context) async {
-    String? selectedLocation = await Navigator.push(
+  Future<SelectedLocation?> _selectLocation(BuildContext context) async {
+    SelectedLocation? selectedLocation = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SelectLocation(),
