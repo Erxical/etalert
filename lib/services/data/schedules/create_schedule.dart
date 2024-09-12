@@ -3,7 +3,7 @@ import 'package:frontend/services/api.dart';
 
 Future<void> createSchedule(ScheduleReq schedule) async {
   try {
-    final response = await Api.dio.post('/schedules', data: {
+    final response = await Api.dio.post('/users/schedules', data: {
       'GoogleId': schedule.googleId,
       'Name': schedule.name,
       'Date': schedule.date,

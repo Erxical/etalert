@@ -2,8 +2,10 @@ import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:frontend/models/maps/location.dart';
+import 'package:frontend/models/schedules/schedule_req.dart';
 import 'package:frontend/models/schedules/schedules.dart';
 import 'package:frontend/models/user/user_info.dart';
+import 'package:frontend/services/data/schedules/create_schedule.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/screens/selectlocation.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -54,6 +56,9 @@ class _CalendarState extends State<Calendar> {
   LatLng _center = const LatLng(13.6512574, 100.4938679);
   Set<Marker> _marker = {};
   late SelectedLocation destinationLocation;
+  SelectedLocation originLocation = SelectedLocation(
+      locationName: 'muaymi\' home',
+      selectedLatLng: const LatLng(13.6337128, 100.4749808));
 
   @override
   void initState() {
@@ -220,17 +225,49 @@ class _CalendarState extends State<Calendar> {
     print('Alarm set for $dateTime with ID $id');
   }
 
-  Future<Schedules?> getScedule(DateTime date) async {
+  String formatDate(DateTime date) {
     var dateTime = date.toLocal();
-    String preferredDate =
+    String formattedDate =
         '${dateTime.day.toString().length == 1 ? '0${dateTime.day}' : '${dateTime.day}'}-${dateTime.month.toString().length == 1 ? '0${dateTime.month}' : '${dateTime.month}'}-${dateTime.year}';
-    final data = await getAllSchedules(widget.googleId, preferredDate);
+    return formattedDate;
+  }
+
+  Future<Schedules?> getScedule(String date) async {
+    final data = await getAllSchedules(widget.googleId, date);
 
     print(data);
     if (data != null) {
       return data;
     }
     return null;
+  }
+
+  Future<void> _createSchedule(
+      String scheduleName,
+      String date,
+      String startTime,
+      String? endTime,
+      double orilat,
+      double orilng,
+      double deslat,
+      double deslng) async {
+    final req = ScheduleReq(
+        googleId: widget.googleId,
+        name: scheduleName,
+        date: date,
+        startTime: startTime,
+        endTime: endTime,
+        isHaveEndTime: true,
+        oriLatitude: orilat,
+        oriLongtitude: orilng,
+        destLatitude: deslat,
+        destLongtitude: deslng,
+        isHaveLocation: true,
+        isFirstSchedule: true);
+    await createSchedule(req);
+    print('create successfully');
+    // final scheduleAndRoutine = await getScedule(date);
+    // print(scheduleAndRoutine);
   }
 
   @override
@@ -529,7 +566,7 @@ class _CalendarState extends State<Calendar> {
   Future<void> _addEventDialog(BuildContext context) async {
     TextEditingController taskNameController = TextEditingController();
     TextEditingController dateController = TextEditingController(
-      text: "${_selectedDay.toLocal()}".split(' ')[0],
+      text: formatDate(_selectedDay),
     );
     TextEditingController timeController = TextEditingController();
     TextEditingController locationController = TextEditingController();
@@ -633,8 +670,7 @@ class _CalendarState extends State<Calendar> {
                           lastDate: DateTime(2101),
                         );
                         if (pickedDate != null) {
-                          dateController.text =
-                              "${pickedDate.toLocal()}".split(' ')[0];
+                          dateController.text = formatDate(pickedDate);
                         }
                       },
                     ),
@@ -693,8 +729,10 @@ class _CalendarState extends State<Calendar> {
                   IconButton(
                     icon: Icon(Icons.map),
                     onPressed: () async {
-                      Position userLocation = await Geolocator.getCurrentPosition();
-                      LatLng userLatLng = LatLng(userLocation.latitude, userLocation.longitude);
+                      Position userLocation =
+                          await Geolocator.getCurrentPosition();
+                      LatLng userLatLng =
+                          LatLng(userLocation.latitude, userLocation.longitude);
                       _showMapDialog(context, userLatLng);
                     },
                   ),
@@ -722,9 +760,6 @@ class _CalendarState extends State<Calendar> {
                           locationController.text =
                               selectedLocation.locationName ?? "";
                           destinationLocation = selectedLocation;
-                          print(destinationLocation.locationName);
-                          print(destinationLocation.selectedLatLng!.latitude);
-                          print(destinationLocation.selectedLatLng!.longitude);
                         }
                       },
                     ),
@@ -753,21 +788,34 @@ class _CalendarState extends State<Calendar> {
                         timeString.isNotEmpty &&
                         location.isNotEmpty) {
                       // Parse the date and time strings
-                      final date = DateTime.parse(dateString);
+                      // final date = DateTime.parse(dateString);
                       final timeParts = timeString.split(':');
                       final time = TimeOfDay(
                         hour: int.parse(timeParts[0]),
                         minute: int.parse(timeParts[1].split(' ')[0]),
                       );
 
+                      _createSchedule(
+                          taskName,
+                          dateString,
+                          time.format(context),
+                          TimeOfDay(
+                                  hour: int.parse(timeParts[0]) + 1,
+                                  minute: int.parse(timeParts[1]))
+                              .format(context),
+                          originLocation.selectedLatLng!.latitude,
+                          originLocation.selectedLatLng!.longitude,
+                          destinationLocation.selectedLatLng!.latitude,
+                          destinationLocation.selectedLatLng!.longitude);
+
                       // Combine date and time
-                      final eventDateTime = DateTime(
-                        date.year,
-                        date.month,
-                        date.day,
-                        time.hour,
-                        time.minute,
-                      );
+                      // final eventDateTime = DateTime(
+                      //   date.year,
+                      //   date.month,
+                      //   date.day,
+                      //   time.hour,
+                      //   time.minute,
+                      // );
 
                       final eventDetails = {
                         'name': taskName,
@@ -787,15 +835,15 @@ class _CalendarState extends State<Calendar> {
                         }
                       });
 
-                      // Set the alarm for the new event
-                      int alarmId = _events[_selectedDay]!
-                          .length; // unique ID for each alarm
-                      await setAlarm(
-                        alarmId,
-                        eventDateTime,
-                        taskName,
-                        'This is your reminder for $taskName',
-                      );
+                      // // Set the alarm for the new event
+                      // int alarmId = _events[_selectedDay]!
+                      //     .length; // unique ID for each alarm
+                      // await setAlarm(
+                      //   alarmId,
+                      //   eventDateTime,
+                      //   taskName,
+                      //   'This is your reminder for $taskName',
+                      // );
 
                       Navigator.pop(context);
                     }
