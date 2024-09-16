@@ -1,6 +1,7 @@
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:frontend/components/custom_schedule_dialog.dart';
 import 'package:frontend/models/maps/location.dart';
 import 'package:frontend/models/schedules/schedule_req.dart';
 import 'package:frontend/models/schedules/schedules.dart';
@@ -8,6 +9,7 @@ import 'package:frontend/models/user/user_info.dart';
 import 'package:frontend/services/data/schedules/create_schedule.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/screens/selectlocation.dart';
+import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -233,10 +235,9 @@ class _CalendarState extends State<Calendar> {
     return formattedDate;
   }
 
-  Future<Schedules?> getScedule(String date) async {
+  Future<List<Schedule>?> getSchedule(String date) async {
     final data = await getAllSchedules(widget.googleId, date);
 
-    print(data);
     if (data != null) {
       return data;
     }
@@ -266,9 +267,29 @@ class _CalendarState extends State<Calendar> {
         isHaveLocation: true,
         isFirstSchedule: true);
     await createSchedule(req);
-    print('create successfully');
-    // final scheduleAndRoutine = await getScedule(date);
-    // print(scheduleAndRoutine);
+    // print('create successfully');
+    final data = await getSchedule(date);
+    final dateTime = DateFormat('dd-MM-yyyy').parse(date);
+
+    if (_events[dateTime] == null) {
+      _events.remove(dateTime);
+    }
+
+    // Convert schedules to the format expected by _events
+    List<Map<String, dynamic>> eventsList = data!
+        .map((schedule) => {
+              'name': schedule.name,
+              'startTime': schedule.startTime,
+              'endTime': schedule.endTime,
+              // Add other fields as needed
+            })
+        .toList();
+
+    // Add the new events to _events
+    _events[dateTime] = eventsList;
+
+    // Trigger a rebuild of the UI
+    setState(() {});
   }
 
   @override
@@ -322,7 +343,7 @@ class _CalendarState extends State<Calendar> {
                     selectedDayPredicate: (day) {
                       return isSameDay(_selectedDay, day);
                     },
-                    onDaySelected: (selectedDay, focusedDay) {
+                    onDaySelected: (selectedDay, focusedDay) async {
                       setState(() {
                         _selectedDay = selectedDay;
                         _focusedDay = focusedDay;
@@ -345,20 +366,20 @@ class _CalendarState extends State<Calendar> {
                     child: _buildTimeline(),
                   ),
                   const SizedBox(height: 8.0),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: _events[_selectedDay]?.length ?? 0,
-                      itemBuilder: (context, index) {
-                        final event = _events[_selectedDay]![index];
-                        // return GestureDetector(
-                        //   onTap: () {
-                        //     _showEventDetailsDialog(context, event);
-                        //   },
-                        //   child: ScheduleCard(name: event['name'] ?? 'No name'),
-                        // );
-                      },
-                    ),
-                  ),
+                  // Expanded(
+                  //   child: ListView.builder(
+                  //     itemCount: _events[_selectedDay]?.length ?? 0,
+                  //     itemBuilder: (context, index) {
+                  //       final event = _events[_selectedDay]![index];
+                  //       // return GestureDetector(
+                  //       //   onTap: () {
+                  //       //     _showEventDetailsDialog(context, event);
+                  //       //   },
+                  //       //   child: ScheduleCard(name: event['name'] ?? 'No name'),
+                  //       // );
+                  //     },
+                  //   ),
+                  // ),
                 ],
               ),
             ),
@@ -454,7 +475,8 @@ class _CalendarState extends State<Calendar> {
     locationController.text = event['location'] ?? 'No Location';
 
     TextEditingController originLocationController = TextEditingController();
-    originLocationController.text = event['originLocation'] ?? 'No Origin Location';
+    originLocationController.text =
+        event['originLocation'] ?? 'No Origin Location';
 
     showDialog(
       context: context,
@@ -495,7 +517,7 @@ class _CalendarState extends State<Calendar> {
                     .onSurface, // Adjust text color if needed
               ),
               decoration: const InputDecoration(
-                labelText: 'Origin Location',
+                labelText: 'Start from?',
                 labelStyle: TextStyle(fontSize: 14.0),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -515,7 +537,7 @@ class _CalendarState extends State<Calendar> {
                     .onSurface, // Adjust text color if needed
               ),
               decoration: const InputDecoration(
-                labelText: 'Location',
+                labelText: 'Where to?',
                 labelStyle: TextStyle(fontSize: 14.0),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -548,279 +570,35 @@ class _CalendarState extends State<Calendar> {
   }
 
   Future<void> _addEventDialog(BuildContext context) async {
-    TextEditingController taskNameController = TextEditingController();
-    TextEditingController dateController = TextEditingController(
-      text: formatDate(_selectedDay),
-    );
-    TextEditingController timeController = TextEditingController();
-    TextEditingController locationController = TextEditingController();
-    TextEditingController originLocationController = TextEditingController();
-
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    OutlineInputBorder customBorder = OutlineInputBorder(
-      borderSide: BorderSide(
-        color: colorScheme.primaryContainer,
-        width: 2.0,
-      ),
-      borderRadius: BorderRadius.circular(8.0),
-    );
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
-        ),
-        content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.8,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'New Schedule',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Add your schedule.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 32),
-              TextField(
-                controller: taskNameController,
-                decoration: InputDecoration(
-                  border: customBorder,
-                  enabledBorder: customBorder,
-                  focusedBorder: customBorder,
-                  labelText: 'Name',
-                  labelStyle: TextStyle(color: colorScheme.primary),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, color: colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: dateController,
-                      decoration: InputDecoration(
-                        border: customBorder,
-                        enabledBorder: customBorder,
-                        focusedBorder: customBorder,
-                        labelText: 'Date',
-                        labelStyle: TextStyle(color: colorScheme.primary),
-                      ),
-                      onTap: () async {
-                        DateTime? pickedDate = await showDatePicker(
-                          context: context,
-                          initialDate: _selectedDay,
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2101),
-                        );
-                        if (pickedDate != null) {
-                          dateController.text = formatDate(pickedDate);
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Icon(Icons.access_time, color: colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: timeController,
-                      decoration: InputDecoration(
-                        border: customBorder,
-                        enabledBorder: customBorder,
-                        focusedBorder: customBorder,
-                        labelText: 'Time',
-                        labelStyle: TextStyle(color: colorScheme.primary),
-                      ),
-                      onTap: () async {
-                        TimeOfDay? pickedTime = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                        );
-                        if (pickedTime != null) {
-                          timeController.text = pickedTime.format(context);
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Icon(Icons.location_on, color: colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: originLocationController,
-                      decoration: InputDecoration(
-                        border: customBorder,
-                        enabledBorder: customBorder,
-                        focusedBorder: customBorder,
-                        labelText: 'Origin Location',
-                        labelStyle: TextStyle(color: colorScheme.primary),
-                      ),
-                      readOnly: true,
-                      onTap: () async {
-                        SelectedLocation? selectedLocation =
-                            await _selectOriginLocation(context);
-                        if (selectedLocation != null) {
-                          setState(() {
-                            originLocation = selectedLocation;
-                            originLocationController.text =
-                                originLocation.locationName ?? "";
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Icon(Icons.location_on, color: colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: locationController,
-                      decoration: InputDecoration(
-                        border: customBorder,
-                        enabledBorder: customBorder,
-                        focusedBorder: customBorder,
-                        labelText: 'Location',
-                        labelStyle: TextStyle(color: colorScheme.primary),
-                      ),
-                      onTap: () async {
-                        SelectedLocation? selectedLocation =
-                            await _selectLocation(context);
-                        if (selectedLocation != null) {
-                          locationController.text =
-                              selectedLocation.locationName ?? "";
-                          destinationLocation = selectedLocation;
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              Center(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final taskName = taskNameController.text.isNotEmpty
-                        ? taskNameController.text
-                        : 'Unnamed Event';
-                    final dateString = dateController.text.isNotEmpty
-                        ? dateController.text
-                        : 'No date';
-                    final timeString = timeController.text.isNotEmpty
-                        ? timeController.text
-                        : '00:00';
-                    final location = locationController.text.isNotEmpty
-                        ? locationController.text
-                        : 'No location';
+      builder: (context) => ScheduleDialog(
+        selectedDay: _selectedDay,
+        onSave: (eventDetails) async {
+          final taskName = eventDetails['name'];
+          final dateString = eventDetails['date'];
+          final time = eventDetails['time'] as TimeOfDay;
+          final location = eventDetails['location'];
 
-                    if (taskName.isNotEmpty &&
-                        dateString.isNotEmpty &&
-                        timeString.isNotEmpty &&
-                        location.isNotEmpty) {
-                      // Parse the date and time strings
-                      // final date = DateTime.parse(dateString);
-                      final timeParts = timeString.split(':');
-                      final time = TimeOfDay(
-                        hour: int.parse(timeParts[0]),
-                        minute: int.parse(timeParts[1].split(' ')[0]),
-                      );
+          await _createSchedule(
+            taskName,
+            dateString,
+            time.format(context),
+            TimeOfDay(hour: time.hour + 1, minute: time.minute).format(context),
+            eventDetails['originLatitude'],
+            eventDetails['originLongitude'],
+            eventDetails['destinationLatitude'],
+            eventDetails['destinationLongitude'],
+          );
 
-                      _createSchedule(
-                          taskName,
-                          dateString,
-                          time.format(context),
-                          TimeOfDay(
-                                  hour: int.parse(timeParts[0]) + 1,
-                                  minute: int.parse(timeParts[1]))
-                              .format(context),
-                          originLocation.selectedLatLng!.latitude,
-                          originLocation.selectedLatLng!.longitude,
-                          destinationLocation.selectedLatLng!.latitude,
-                          destinationLocation.selectedLatLng!.longitude);
-
-                      // Combine date and time
-                      // final eventDateTime = DateTime(
-                      //   date.year,
-                      //   date.month,
-                      //   date.day,
-                      //   time.hour,
-                      //   time.minute,
-                      // );
-
-                      final eventDetails = {
-                        'name': taskName,
-                        'date': dateString,
-                        'time': time, // Store TimeOfDay directly
-                        'location': location,
-                        'originLocation': originLocationController.text,
-                        'originLatitude': _originLatLng?.latitude,
-                        'originLongitude': _originLatLng?.longitude,
-                      };
-
-                      setState(() {
-                        if (_events[_selectedDay] != null) {
-                          _events[_selectedDay]!.add(eventDetails);
-                        } else {
-                          _events[_selectedDay] = [eventDetails];
-                        }
-                      });
-
-                      // // Set the alarm for the new event
-                      // int alarmId = _events[_selectedDay]!
-                      //     .length; // unique ID for each alarm
-                      // await setAlarm(
-                      //   alarmId,
-                      //   eventDateTime,
-                      //   taskName,
-                      //   'This is your reminder for $taskName',
-                      // );
-
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Save'),
-                ),
-              ),
-            ],
-          ),
-        ),
+          setState(() {
+            if (_events[_selectedDay] != null) {
+              _events[_selectedDay]!.add(eventDetails);
+            } else {
+              _events[_selectedDay] = [eventDetails];
+            }
+          });
+        },
       ),
     );
   }
@@ -840,7 +618,7 @@ class _CalendarState extends State<Calendar> {
     SelectedLocation? selectedLocation = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SelectOriginLocation(),
+        builder: (context) => const SelectOriginLocation(),
       ),
     );
 

@@ -1,13 +1,15 @@
+import 'dart:convert';
+
 import 'package:frontend/models/schedules/schedules.dart';
 import 'package:frontend/services/api.dart';
 
-Future<Schedules?> getAllSchedules(String googleId, String date) async {
+Future<List<Schedule>?> getAllSchedules(String googleId, String date) async {
   try {
     final response = await Api.dio.get('/users/schedules/$googleId/$date');
 
     if (response.statusCode == 200) {
       final data = response.data;
-      Schedules res = Schedules.fromJson(data);
+      List<Schedule> res = parseSchedules(json.encode(data));
       return res;
     }
   } catch (e) {
