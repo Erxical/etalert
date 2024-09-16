@@ -14,6 +14,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:timeline_tile/timeline_tile.dart';
 import 'package:frontend/services/data/schedules/get_schedules.dart';
+import 'package:frontend/screens/selectoriginlocation.dart';
 
 Future<void> backgroundNotificationHandler(
     NotificationResponse response) async {
@@ -452,6 +453,9 @@ class _CalendarState extends State<Calendar> {
     TextEditingController locationController = TextEditingController();
     locationController.text = event['location'] ?? 'No Location';
 
+    TextEditingController originLocationController = TextEditingController();
+    originLocationController.text = event['originLocation'] ?? 'No Origin Location';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -482,9 +486,23 @@ class _CalendarState extends State<Calendar> {
           children: [
             Text('Date: ${event['date']}'),
             Text('Time: ${event['time'].format(context)}'),
-            Text(
-              'Origin Location: ${event['originLocation'] ?? 'No Origin Location'}',
-              style: const TextStyle(fontSize: 14.0),
+            TextField(
+              controller: locationController,
+              style: TextStyle(
+                fontSize: 14.0, // Set the desired font size here
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface, // Adjust text color if needed
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Origin Location',
+                labelStyle: TextStyle(fontSize: 14.0),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 8.0),
+              ),
+              maxLines: null,
             ),
             const SizedBox(height: 16),
             // Text field for editing location
@@ -518,6 +536,7 @@ class _CalendarState extends State<Calendar> {
               // Save the updated location
               setState(() {
                 event['location'] = locationController.text;
+                event['originLocation'] = originLocationController.text;
               });
               Navigator.pop(context);
             },
@@ -525,41 +544,6 @@ class _CalendarState extends State<Calendar> {
           ),
         ],
       ),
-    );
-  }
-
-  Future<void> _showMapDialog(BuildContext context, LatLng location) async {
-    return showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          content: Container(
-            width: MediaQuery.of(context).size.width * 0.8,
-            height: MediaQuery.of(context).size.height * 0.6,
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: location,
-                zoom: 14.0,
-              ),
-              markers: {
-                Marker(
-                  markerId: MarkerId('userLocation'),
-                  position: location,
-                ),
-              },
-              myLocationEnabled: true,
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -582,21 +566,6 @@ class _CalendarState extends State<Calendar> {
       ),
       borderRadius: BorderRadius.circular(8.0),
     );
-
-    // Get the user's current location
-    Position userLocation = await Geolocator.getCurrentPosition();
-    LatLng userLatLng = LatLng(userLocation.latitude, userLocation.longitude);
-
-    // Pre-set the origin location controller with the user's location
-    originLocationController.text = await placemarkFromCoordinates(
-            userLatLng.latitude, userLatLng.longitude)
-        .then((placemarks) {
-      if (placemarks.isNotEmpty) {
-        return placemarks[0].name ?? "";
-      } else {
-        return "Unknown Location";
-      }
-    });
 
     showDialog(
       context: context,
@@ -720,21 +689,19 @@ class _CalendarState extends State<Calendar> {
                         labelText: 'Origin Location',
                         labelStyle: TextStyle(color: colorScheme.primary),
                       ),
-                      onChanged: (text) {
-                        // Update the origin location when the text changes
-                        originLocationController.text = text;
+                      readOnly: true,
+                      onTap: () async {
+                        SelectedLocation? selectedLocation =
+                            await _selectOriginLocation(context);
+                        if (selectedLocation != null) {
+                          setState(() {
+                            originLocation = selectedLocation;
+                            originLocationController.text =
+                                originLocation.locationName ?? "";
+                          });
+                        }
                       },
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.map),
-                    onPressed: () async {
-                      Position userLocation =
-                          await Geolocator.getCurrentPosition();
-                      LatLng userLatLng =
-                          LatLng(userLocation.latitude, userLocation.longitude);
-                      _showMapDialog(context, userLatLng);
-                    },
                   ),
                 ],
               ),
@@ -863,6 +830,17 @@ class _CalendarState extends State<Calendar> {
       context,
       MaterialPageRoute(
         builder: (context) => SelectLocation(),
+      ),
+    );
+
+    return selectedLocation;
+  }
+
+  Future<SelectedLocation?> _selectOriginLocation(BuildContext context) async {
+    SelectedLocation? selectedLocation = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SelectOriginLocation(),
       ),
     );
 
