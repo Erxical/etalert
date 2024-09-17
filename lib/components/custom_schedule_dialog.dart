@@ -24,7 +24,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
   TextEditingController timeController = TextEditingController();
   TextEditingController locationController = TextEditingController();
   TextEditingController originLocationController = TextEditingController();
-  bool? isChecked = false;
+  bool isChecked = false;
   late SelectedLocation originLocation;
   late SelectedLocation destinationLocation;
 
@@ -173,7 +173,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
                     value: isChecked,
                     onChanged: (value) {
                       setState(() {
-                        isChecked = value;
+                        isChecked = value!;
                       });
                     },
                     activeColor: Theme.of(context).colorScheme.primary,
@@ -182,8 +182,14 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
-                    flex: 7, child: Text('Want to set your morning routines?')),
+                Expanded(
+                    flex: 7,
+                    child: Text(
+                      'Want to set your morning routines?',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600),
+                    )),
               ],
             ),
             const SizedBox(height: 20),
@@ -286,6 +292,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
                       'name': taskName,
                       'date': dateString,
                       'time': time,
+                      'isChecked': isChecked,
                       'location': location,
                       'originLocation': originLocationController.text,
                       'originLatitude': originLocation.selectedLatLng?.latitude,

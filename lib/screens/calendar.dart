@@ -44,8 +44,8 @@ class Calendar extends StatefulWidget {
 
 class _CalendarState extends State<Calendar> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
-  DateTime _selectedDay = DateTime.now();
-  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = DateTime.now().toLocal();
+  DateTime _focusedDay = DateTime.now().toLocal();
   UserData? data;
   bool isLoading = false;
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -235,6 +235,11 @@ class _CalendarState extends State<Calendar> {
     return formattedDate;
   }
 
+  TimeOfDay formatTime(String time) {
+    final times = time.split(':');
+    return TimeOfDay(hour: int.parse(times[0]), minute: int.parse(times[1]));
+  }
+
   Future<List<Schedule>?> getSchedule(String date) async {
     final data = await getAllSchedules(widget.googleId, date);
 
@@ -245,48 +250,52 @@ class _CalendarState extends State<Calendar> {
   }
 
   Future<void> _createSchedule(
-      String scheduleName,
-      String date,
-      String startTime,
-      String? endTime,
-      double orilat,
-      double orilng,
-      double deslat,
-      double deslng) async {
+    String scheduleName,
+    String date,
+    String startTime,
+    String? endTime,
+    double orilat,
+    double orilng,
+    double deslat,
+    double deslng,
+    bool isFirstSchedule,
+    DateTime selectedDay,
+  ) async {
     final req = ScheduleReq(
-        googleId: widget.googleId,
-        name: scheduleName,
-        date: date,
-        startTime: startTime,
-        endTime: endTime,
-        isHaveEndTime: true,
-        oriLatitude: orilat,
-        oriLongtitude: orilng,
-        destLatitude: deslat,
-        destLongtitude: deslng,
-        isHaveLocation: true,
-        isFirstSchedule: true);
+      googleId: widget.googleId,
+      name: scheduleName,
+      date: date,
+      startTime: startTime,
+      endTime: endTime,
+      isHaveEndTime: true,
+      oriLatitude: orilat,
+      oriLongtitude: orilng,
+      destLatitude: deslat,
+      destLongtitude: deslng,
+      isHaveLocation: true,
+      isFirstSchedule: isFirstSchedule,
+    );
     await createSchedule(req);
-    // print('create successfully');
-    final data = await getSchedule(date);
-    final dateTime = DateFormat('dd-MM-yyyy').parse(date);
 
-    if (_events[dateTime] == null) {
-      _events.remove(dateTime);
+    final data = await getSchedule(date);
+
+    if (_events[selectedDay] == null) {
+      _events.remove(selectedDay);
     }
 
     // Convert schedules to the format expected by _events
     List<Map<String, dynamic>> eventsList = data!
         .map((schedule) => {
               'name': schedule.name,
-              'startTime': schedule.startTime,
+              'time': formatTime(schedule.startTime),
               'endTime': schedule.endTime,
+
               // Add other fields as needed
             })
         .toList();
 
     // Add the new events to _events
-    _events[dateTime] = eventsList;
+    _events[selectedDay] = eventsList;
 
     // Trigger a rebuild of the UI
     setState(() {});
@@ -366,20 +375,6 @@ class _CalendarState extends State<Calendar> {
                     child: _buildTimeline(),
                   ),
                   const SizedBox(height: 8.0),
-                  // Expanded(
-                  //   child: ListView.builder(
-                  //     itemCount: _events[_selectedDay]?.length ?? 0,
-                  //     itemBuilder: (context, index) {
-                  //       final event = _events[_selectedDay]![index];
-                  //       // return GestureDetector(
-                  //       //   onTap: () {
-                  //       //     _showEventDetailsDialog(context, event);
-                  //       //   },
-                  //       //   child: ScheduleCard(name: event['name'] ?? 'No name'),
-                  //       // );
-                  //     },
-                  //   ),
-                  // ),
                 ],
               ),
             ),
@@ -509,7 +504,7 @@ class _CalendarState extends State<Calendar> {
             Text('Date: ${event['date']}'),
             Text('Time: ${event['time'].format(context)}'),
             TextField(
-              controller: locationController,
+              controller: originLocationController,
               style: TextStyle(
                 fontSize: 14.0, // Set the desired font size here
                 color: Theme.of(context)
@@ -578,7 +573,10 @@ class _CalendarState extends State<Calendar> {
           final taskName = eventDetails['name'];
           final dateString = eventDetails['date'];
           final time = eventDetails['time'] as TimeOfDay;
+          final isChecked = eventDetails['isChecked'];
           final location = eventDetails['location'];
+
+          print(isChecked);
 
           await _createSchedule(
             taskName,
@@ -589,15 +587,9 @@ class _CalendarState extends State<Calendar> {
             eventDetails['originLongitude'],
             eventDetails['destinationLatitude'],
             eventDetails['destinationLongitude'],
+            isChecked,
+            _selectedDay,
           );
-
-          setState(() {
-            if (_events[_selectedDay] != null) {
-              _events[_selectedDay]!.add(eventDetails);
-            } else {
-              _events[_selectedDay] = [eventDetails];
-            }
-          });
         },
       ),
     );
