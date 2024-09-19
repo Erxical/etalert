@@ -7,6 +7,7 @@ import 'package:frontend/models/schedules/schedule_req.dart';
 import 'package:frontend/models/schedules/schedules.dart';
 import 'package:frontend/models/user/user_info.dart';
 import 'package:frontend/services/data/schedules/create_schedule.dart';
+import 'package:frontend/services/data/schedules/get_user_schedules.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/screens/selectlocation.dart';
 import 'package:intl/intl.dart';
@@ -100,6 +101,7 @@ class _CalendarState extends State<Calendar> {
       _showNotification(alarmSettings);
     });
     _setInitialLocation();
+    _fetchAndProcessSchedules();
   }
 
   Future<void> _setInitialLocation() async {
@@ -249,13 +251,43 @@ class _CalendarState extends State<Calendar> {
     return null;
   }
 
-  Future<List<Schedule>?> getUserSchedules(String googleId) async {
-    final data = await getUserSchedules(googleId);
+  Future<void> _fetchAndProcessSchedules() async {
+    try {
+      final schedules = await getUserSchedules(widget.googleId);
+      if (schedules != null) {
+        for (var schedule in schedules) {
+          final date = DateFormat('dd-MM-yyyy')
+              .parse(schedule.date)
+              .add(Duration(hours: 7));
+          print(date.toUtc());
 
-    if (data != null) {
-      return data;
+          List<String> dateSplited = schedule.date.split('-');
+          final formattedDate = DateTime(int.parse(dateSplited[2]),
+              int.parse(dateSplited[1]), int.parse(dateSplited[0]));
+          print(formattedDate);
+          final event = {
+            'name': schedule.name,
+            'date': schedule.date,
+            'time': TimeOfDay(
+              hour: int.parse(schedule.startTime.split(':')[0]),
+              minute: int.parse(schedule.startTime.split(':')[1]),
+            ),
+            'endTime': schedule.endTime,
+            'location': schedule.destinationName,
+            'originLocation': schedule.originName,
+          };
+
+          if (_events[date.toUtc()] == null) {
+            _events[date.toUtc()] = [];
+          }
+          _events[date.toUtc()]!.add(event);
+        }
+        setState(() {}); // Trigger a rebuild of the UI
+      }
+    } catch (e) {
+      print('Error fetching schedules: $e');
+      // Optionally, show an error message to the user
     }
-    return null;
   }
 
   Future<void> _createSchedule(
