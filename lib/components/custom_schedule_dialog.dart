@@ -32,10 +32,6 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
   void initState() {
     super.initState();
     dateController.text = formatDate(widget.selectedDay);
-    originLocation = SelectedLocation(
-      locationName: 'muaymi\' home',
-      selectedLatLng: const LatLng(13.6337128, 100.4749808),
-    );
   }
 
   String formatDate(DateTime date) {

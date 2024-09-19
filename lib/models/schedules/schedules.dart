@@ -6,7 +6,8 @@ class Schedule {
   final String startTime;
   final String endTime;
   final bool isHaveEndTime;
-  final String locationName;
+  final String originName;
+  final String destinationName;
   final double latitude;
   final double longtitude;
   final bool isHaveLocation;
@@ -18,7 +19,8 @@ class Schedule {
     required this.startTime,
     required this.endTime,
     required this.isHaveEndTime,
-    required this.locationName,
+    required this.originName,
+    required this.destinationName,
     required this.latitude,
     required this.longtitude,
     required this.isHaveLocation,
@@ -43,7 +45,8 @@ class Schedule {
       startTime: json['StartTime'],
       endTime: json['EndTime'],
       isHaveEndTime: json['IsHaveEndTime'],
-      locationName: json['LocName'],
+      originName: json['OriName'],
+      destinationName: json['DestName'],
       latitude: _parseDouble(json['Latitude']),
       longtitude: _parseDouble(json['Longitude']),
       isHaveLocation: json['IsHaveLocation'],

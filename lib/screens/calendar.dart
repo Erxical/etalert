@@ -59,9 +59,9 @@ class _CalendarState extends State<Calendar> {
   LatLng _center = const LatLng(13.6512574, 100.4938679);
   Set<Marker> _marker = {};
   late SelectedLocation destinationLocation;
-  SelectedLocation originLocation = SelectedLocation(
-      locationName: 'muaymi\' home',
-      selectedLatLng: const LatLng(13.6337128, 100.4749808));
+  // SelectedLocation originLocation = SelectedLocation(
+  //     locationName: 'muaymi\' home',
+  //     selectedLatLng: const LatLng(13.6337128, 100.4749808));
 
   @override
   void initState() {
