@@ -10,13 +10,15 @@ Future<void> createSchedule(ScheduleReq schedule) async {
       'StartTime': schedule.startTime,
       'EndTime': schedule.endTime,
       'IsHaveEndTime': schedule.isHaveEndTime,
+      'OriName': schedule.oriName,
       'OriLatitude': schedule.oriLatitude,
       'OriLongitude': schedule.oriLongtitude,
+      'DestName': schedule.desName,
       'DestLatitude': schedule.destLatitude,
       'DestLongitude': schedule.destLongtitude,
       'IsHaveLocation': schedule.isHaveLocation,
       'IsFirstSchedule': schedule.isFirstSchedule,
-      'DepartTime': schedule.departTime,
+      'IsTraveling': schedule.isTraveling,
     });
   } catch (e) {
     rethrow;

@@ -5,13 +5,15 @@ class ScheduleReq {
   final String startTime;
   final String? endTime;
   final bool isHaveEndTime;
+  final String? oriName;
   final double? oriLatitude;
   final double? oriLongtitude;
+  final String? desName;
   final double? destLatitude;
   final double? destLongtitude;
   final bool isHaveLocation;
   final bool isFirstSchedule;
-  final String? departTime;
+  final bool isTraveling;
 
   ScheduleReq({
     required this.googleId,
@@ -20,12 +22,14 @@ class ScheduleReq {
     required this.startTime,
     this.endTime,
     required this.isHaveEndTime,
+    this.oriName,
     this.oriLatitude,
     this.oriLongtitude,
+    this.desName,
     this.destLatitude,
     this.destLongtitude,
     required this.isHaveLocation,
     required this.isFirstSchedule,
-    this.departTime,
+    required this.isTraveling,
   });
 }

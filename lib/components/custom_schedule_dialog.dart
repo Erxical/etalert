@@ -298,6 +298,7 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
                       'originLatitude': originLocation.selectedLatLng?.latitude,
                       'originLongitude':
                           originLocation.selectedLatLng?.longitude,
+                      'destinationLocation': locationController.text,
                       'destinationLatitude':
                           destinationLocation.selectedLatLng?.latitude,
                       'destinationLongitude':

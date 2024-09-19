@@ -254,12 +254,15 @@ class _CalendarState extends State<Calendar> {
     String date,
     String startTime,
     String? endTime,
+    String oriName,
     double orilat,
     double orilng,
+    String desName,
     double deslat,
     double deslng,
     bool isFirstSchedule,
     DateTime selectedDay,
+    bool isTraveling,
   ) async {
     final req = ScheduleReq(
       googleId: widget.googleId,
@@ -268,12 +271,15 @@ class _CalendarState extends State<Calendar> {
       startTime: startTime,
       endTime: endTime,
       isHaveEndTime: true,
+      oriName: oriName,
       oriLatitude: orilat,
       oriLongtitude: orilng,
+      desName: desName,
       destLatitude: deslat,
       destLongtitude: deslng,
       isHaveLocation: true,
       isFirstSchedule: isFirstSchedule,
+      isTraveling: isTraveling,
     );
     await createSchedule(req);
 
@@ -574,21 +580,23 @@ class _CalendarState extends State<Calendar> {
           final dateString = eventDetails['date'];
           final time = eventDetails['time'] as TimeOfDay;
           final isChecked = eventDetails['isChecked'];
-          final location = eventDetails['location'];
-
-          print(isChecked);
+          final oriLocationName = eventDetails['originLocation'];
+          final desLocationName = eventDetails['destinationLocation'];
 
           await _createSchedule(
             taskName,
             dateString,
             time.format(context),
             TimeOfDay(hour: time.hour + 1, minute: time.minute).format(context),
+            oriLocationName,
             eventDetails['originLatitude'],
             eventDetails['originLongitude'],
+            desLocationName,
             eventDetails['destinationLatitude'],
             eventDetails['destinationLongitude'],
             isChecked,
             _selectedDay,
+            isChecked,
           );
         },
       ),
