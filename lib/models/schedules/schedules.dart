@@ -2,9 +2,11 @@ import 'dart:convert';
 
 class Schedule {
   final String name;
+  final String date;
   final String startTime;
   final String endTime;
   final bool isHaveEndTime;
+  final String locationName;
   final double latitude;
   final double longtitude;
   final bool isHaveLocation;
@@ -12,9 +14,11 @@ class Schedule {
 
   Schedule({
     required this.name,
+    required this.date,
     required this.startTime,
     required this.endTime,
     required this.isHaveEndTime,
+    required this.locationName,
     required this.latitude,
     required this.longtitude,
     required this.isHaveLocation,
@@ -35,9 +39,11 @@ class Schedule {
   factory Schedule.fromJson(Map<String, dynamic> json) {
     return Schedule(
       name: json['Name'],
+      date: json['Date'],
       startTime: json['StartTime'],
       endTime: json['EndTime'],
       isHaveEndTime: json['IsHaveEndTime'],
+      locationName: json['LocName'],
       latitude: _parseDouble(json['Latitude']),
       longtitude: _parseDouble(json['Longitude']),
       isHaveLocation: json['IsHaveLocation'],

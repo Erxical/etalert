@@ -249,6 +249,15 @@ class _CalendarState extends State<Calendar> {
     return null;
   }
 
+  Future<List<Schedule>?> getUserSchedules(String googleId) async {
+    final data = await getUserSchedules(googleId);
+
+    if (data != null) {
+      return data;
+    }
+    return null;
+  }
+
   Future<void> _createSchedule(
     String scheduleName,
     String date,
@@ -293,10 +302,9 @@ class _CalendarState extends State<Calendar> {
     List<Map<String, dynamic>> eventsList = data!
         .map((schedule) => {
               'name': schedule.name,
+              'date': schedule.date,
               'time': formatTime(schedule.startTime),
               'endTime': schedule.endTime,
-
-              // Add other fields as needed
             })
         .toList();
 
