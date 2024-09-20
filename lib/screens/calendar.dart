@@ -8,7 +8,7 @@ import 'package:frontend/models/schedules/schedules.dart';
 import 'package:frontend/models/user/user_info.dart';
 import 'package:frontend/services/data/schedules/create_schedule.dart';
 import 'package:frontend/services/data/schedules/get_user_schedules.dart';
-import 'package:go_router/go_router.dart';
+import 'package:frontend/services/notification/notification_handler.dart';
 import 'package:frontend/screens/selectlocation.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -18,22 +18,6 @@ import 'package:geocoding/geocoding.dart';
 import 'package:timeline_tile/timeline_tile.dart';
 import 'package:frontend/services/data/schedules/get_schedules.dart';
 import 'package:frontend/screens/selectoriginlocation.dart';
-
-Future<void> backgroundNotificationHandler(
-    NotificationResponse response) async {
-  final String? payload = response.payload;
-  if (payload != null) {
-    try {
-      int alarmId = int.parse(payload);
-      await Alarm.stop(alarmId);
-      print('Alarm with ID $alarmId stopped.');
-    } catch (e) {
-      print('Error stopping alarm: $e');
-    }
-  } else {
-    print('No payload found.');
-  }
-}
 
 class Calendar extends StatefulWidget {
   final String googleId;
@@ -63,43 +47,12 @@ class _CalendarState extends State<Calendar> {
   // SelectedLocation originLocation = SelectedLocation(
   //     locationName: 'muaymi\' home',
   //     selectedLatLng: const LatLng(13.6337128, 100.4749808));
+  final NotificationsHandler _notificationsHandler = NotificationsHandler();
 
   @override
   void initState() {
     super.initState();
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
-      requestAlertPermission: true,
-    );
-    const InitializationSettings initializationSettings =
-        InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
-
-    flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        final String? payload = response.payload;
-        if (payload != null) {
-          int alarmId = int.parse(payload);
-          await Alarm.stop(alarmId);
-
-          // Optionally, navigate to a specific screen if needed
-          context.push('/');
-        }
-      },
-      onDidReceiveBackgroundNotificationResponse:
-          backgroundNotificationHandler, // Use the top-level function here
-    );
-
-    Alarm.ringStream.stream.listen((alarmSettings) {
-      _showNotification(alarmSettings);
-    });
+     _notificationsHandler.initialize();
     _setInitialLocation();
     _fetchAndProcessSchedules();
   }
@@ -191,29 +144,6 @@ class _CalendarState extends State<Calendar> {
     }
   }
 
-  Future<void> _showNotification(AlarmSettings alarmSettings) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'your_channel_id',
-      'your_channel_name',
-      importance: Importance.max,
-      priority: Priority.high,
-      sound: RawResourceAndroidNotificationSound(
-          'mixkit_warning_alarm_buzzer_991'),
-    );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-      iOS: DarwinNotificationDetails(),
-    );
-    await flutterLocalNotificationsPlugin.show(
-      alarmSettings.id,
-      alarmSettings.notificationTitle,
-      alarmSettings.notificationBody,
-      platformChannelSpecifics,
-      payload: alarmSettings.id.toString(), // Ensure the payload is correct
-    );
-  }
-
   Future<void> setAlarm(
       int id, DateTime dateTime, String title, String body) async {
     await Alarm.init();
@@ -226,7 +156,7 @@ class _CalendarState extends State<Calendar> {
       loopAudio: true,
       enableNotificationOnKill: true,
     );
-    await Alarm.set(alarmSettings: alarmSetting);
+    await _notificationsHandler.showNotification(alarmSetting);
     print('Alarm set for $dateTime with ID $id');
   }
 
@@ -623,6 +553,14 @@ class _CalendarState extends State<Calendar> {
           final oriLocationName = eventDetails['originLocation'];
           final desLocationName = eventDetails['destinationLocation'];
 
+          final scheduledDateTime = DateTime(
+          _selectedDay.year,
+          _selectedDay.month,
+          _selectedDay.day,
+          time.hour,
+          time.minute,
+        );
+
           await _createSchedule(
             taskName,
             dateString,
@@ -638,6 +576,21 @@ class _CalendarState extends State<Calendar> {
             _selectedDay,
             isChecked,
           );
+
+          final notificationId = DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
+
+          await _notificationsHandler.showNotification(
+            AlarmSettings(
+              id: notificationId,
+              dateTime: scheduledDateTime,
+              notificationTitle: taskName,
+              notificationBody: "Your schedule is about to start!",
+              assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
+              loopAudio: true,
+              enableNotificationOnKill: true,
+            ),
+          );
+          setState(() {});
         },
       ),
     );

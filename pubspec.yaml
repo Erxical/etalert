@@ -53,6 +53,7 @@ dependencies:
   google_maps_flutter: ^2.9.0  # Corrected line with colon (:)
   geocoding: ^3.0.0
   flutter_typeahead: ^4.1.0
+  timezone: ^0.9.0
 
 dev_dependencies:
   flutter_test:
