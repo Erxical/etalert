@@ -1,11 +1,13 @@
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/components/custom_schedule_dialog.dart';
 import 'package:frontend/models/maps/location.dart';
 import 'package:frontend/models/schedules/schedule_req.dart';
 import 'package:frontend/models/schedules/schedules.dart';
 import 'package:frontend/models/user/user_info.dart';
+import 'package:frontend/providers/schedule_provider.dart';
 import 'package:frontend/services/data/schedules/create_schedule.dart';
 import 'package:frontend/services/data/schedules/get_user_schedules.dart';
 import 'package:frontend/services/notification/notification_handler.dart';
@@ -19,15 +21,15 @@ import 'package:timeline_tile/timeline_tile.dart';
 import 'package:frontend/services/data/schedules/get_schedules.dart';
 import 'package:frontend/screens/selectoriginlocation.dart';
 
-class Calendar extends StatefulWidget {
+class Calendar extends ConsumerStatefulWidget {
   final String googleId;
   const Calendar({super.key, required this.googleId});
 
   @override
-  State<Calendar> createState() => _CalendarState();
+  ConsumerState<Calendar> createState() => _CalendarState();
 }
 
-class _CalendarState extends State<Calendar> {
+class _CalendarState extends ConsumerState<Calendar> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _selectedDay = DateTime.now().toLocal();
   DateTime _focusedDay = DateTime.now().toLocal();
@@ -54,7 +56,6 @@ class _CalendarState extends State<Calendar> {
     super.initState();
     _notificationsHandler.initialize();
     _setInitialLocation();
-    _fetchAndProcessSchedules();
   }
 
   Future<void> _setInitialLocation() async {
@@ -181,39 +182,34 @@ class _CalendarState extends State<Calendar> {
     return null;
   }
 
-  Future<void> _fetchAndProcessSchedules() async {
-    try {
-      final schedules = await getUserSchedules(widget.googleId);
-      if (schedules != null) {
-        for (var schedule in schedules) {
-          final date = DateFormat('dd-MM-yyyy')
-              .parse(schedule.date)
-              .add(const Duration(hours: 7));
+  void _processSchedules(List<Schedule> schedules) {
+    setState(() {
+      _events.clear(); // Clear existing events before processing
+      for (var schedule in schedules) {
+        final date = DateFormat('dd-MM-yyyy')
+            .parse(schedule.date)
+            .add(const Duration(hours: 7));
 
-          final event = {
-            'id': schedule.id,
-            'name': schedule.name,
-            'date': schedule.date,
-            'time': TimeOfDay(
-              hour: int.parse(schedule.startTime.split(':')[0]),
-              minute: int.parse(schedule.startTime.split(':')[1]),
-            ),
-            'endTime': schedule.endTime,
-            'location': schedule.destinationName,
-            'originLocation': schedule.originName,
-          };
+        final event = {
+          'id': schedule.id,
+          'name': schedule.name,
+          'date': schedule.date,
+          'time': TimeOfDay(
+            hour: int.parse(schedule.startTime.split(':')[0]),
+            minute: int.parse(schedule.startTime.split(':')[1]),
+          ),
+          'endTime': schedule.endTime,
+          'location': schedule.destinationName,
+          'originLocation': schedule.originName,
+        };
 
-          if (_events[date.toUtc()] == null) {
-            _events[date.toUtc()] = [];
-          }
-          _events[date.toUtc()]!.add(event);
+        if (_events[date.toUtc()] == null) {
+          _events[date.toUtc()] = [];
         }
-        setState(() {}); // Trigger a rebuild of the UI
+        _events[date.toUtc()]!.add(event);
       }
-    } catch (e) {
-      print('Error fetching schedules: $e');
-      // Optionally, show an error message to the user
-    }
+      _buildTimeline();
+    });
   }
 
   Future<void> _createSchedule(
@@ -248,118 +244,102 @@ class _CalendarState extends State<Calendar> {
       isFirstSchedule: isFirstSchedule,
       isTraveling: isTraveling,
     );
-    await createSchedule(req);
-
-    final data = await getSchedule(date);
-
-    if (_events[selectedDay] == null) {
-      _events.remove(selectedDay);
-    }
-
-    // Convert schedules to the format expected by _events
-    List<Map<String, dynamic>> eventsList = data!
-        .map((schedule) => {
-              'id': schedule.id,
-              'name': schedule.name,
-              'date': schedule.date,
-              'time': formatTime(schedule.startTime),
-              'endTime': schedule.endTime,
-            })
-        .toList();
-
-    // Add the new events to _events
-    _events[selectedDay] = eventsList;
-
-    // Trigger a rebuild of the UI
-    setState(() {});
+    await ref.read(scheduleProvider(widget.googleId).notifier).addSchedule(req);
   }
 
   @override
   Widget build(BuildContext context) {
-    return isLoading
-        ? Scaffold(
-            body: Center(
-                child: Text(
-              'Loading...',
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary, fontSize: 20),
-            )),
-          )
-        : Scaffold(
-            appBar: AppBar(
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    'ETAlert',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600),
-                  ),
-                  // RoundedImage(url: data!.image)
-                ],
-              ),
+    final scheduleState = ref.watch(scheduleProvider(widget.googleId));
+
+    return scheduleState.when(
+      data: (schedules) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _processSchedules(schedules);
+        });
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(
+                  'ETAlert',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600),
+                ),
+                // RoundedImage(url: data!.image)
+              ],
             ),
-            body: SafeArea(
-              child: Column(
-                children: [
-                  TableCalendar(
-                    calendarStyle: CalendarStyle(
-                      selectedDecoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      todayDecoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        shape: BoxShape.circle,
-                      ),
-                      todayTextStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      markersMaxCount: 2,
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                TableCalendar(
+                  calendarStyle: CalendarStyle(
+                    selectedDecoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      shape: BoxShape.circle,
                     ),
-                    firstDay: DateTime.utc(2020, 1, 1),
-                    lastDay: DateTime.utc(2030, 12, 31),
-                    focusedDay: _focusedDay,
-                    calendarFormat: _calendarFormat,
-                    selectedDayPredicate: (day) {
-                      return isSameDay(_selectedDay, day);
-                    },
-                    onDaySelected: (selectedDay, focusedDay) async {
-                      setState(() {
-                        _selectedDay = selectedDay;
-                        _focusedDay = focusedDay;
-                      });
-                    },
-                    eventLoader: (day) {
-                      return _events[day]
-                              ?.map((event) => event['name'] ?? '')
-                              .toList() ??
-                          [];
-                    },
-                    onFormatChanged: (format) {
-                      setState(() {
-                        _calendarFormat = format;
-                      });
-                    },
+                    todayDecoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    todayTextStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    markersMaxCount: 2,
                   ),
-                  const SizedBox(height: 8.0),
-                  Expanded(
-                    child: _buildTimeline(),
-                  ),
-                  const SizedBox(height: 8.0),
-                ],
-              ),
+                  firstDay: DateTime.utc(2020, 1, 1),
+                  lastDay: DateTime.utc(2030, 12, 31),
+                  focusedDay: _focusedDay,
+                  calendarFormat: _calendarFormat,
+                  selectedDayPredicate: (day) {
+                    return isSameDay(_selectedDay, day);
+                  },
+                  onDaySelected: (selectedDay, focusedDay) async {
+                    setState(() {
+                      _selectedDay = selectedDay;
+                      _focusedDay = focusedDay;
+                    });
+                  },
+                  eventLoader: (day) {
+                    return _events[day]
+                            ?.map((event) => event['name'] ?? '')
+                            .toList() ??
+                        [];
+                  },
+                  onFormatChanged: (format) {
+                    setState(() {
+                      _calendarFormat = format;
+                    });
+                  },
+                ),
+                const SizedBox(height: 8.0),
+                Expanded(
+                  child: _buildTimeline(),
+                ),
+                const SizedBox(height: 8.0),
+              ],
             ),
-            floatingActionButton: FloatingActionButton(
-              shape: const CircleBorder(),
-              child: Icon(
-                Icons.add,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              onPressed: () => _addEventDialog(context),
+          ),
+          floatingActionButton: FloatingActionButton(
+            shape: const CircleBorder(),
+            child: Icon(
+              Icons.add,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
-          );
+            onPressed: () => _addEventDialog(context),
+          ),
+        );
+      },
+      error: (error, stack) => Scaffold(
+        body: Center(child: Text('Error: $error')),
+      ),
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+    );
   }
 
   @override
