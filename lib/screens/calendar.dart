@@ -52,7 +52,7 @@ class _CalendarState extends State<Calendar> {
   @override
   void initState() {
     super.initState();
-     _notificationsHandler.initialize();
+    _notificationsHandler.initialize();
     _setInitialLocation();
     _fetchAndProcessSchedules();
   }
@@ -188,14 +188,10 @@ class _CalendarState extends State<Calendar> {
         for (var schedule in schedules) {
           final date = DateFormat('dd-MM-yyyy')
               .parse(schedule.date)
-              .add(Duration(hours: 7));
-          print(date.toUtc());
+              .add(const Duration(hours: 7));
 
-          List<String> dateSplited = schedule.date.split('-');
-          final formattedDate = DateTime(int.parse(dateSplited[2]),
-              int.parse(dateSplited[1]), int.parse(dateSplited[0]));
-          print(formattedDate);
           final event = {
+            'id': schedule.id,
             'name': schedule.name,
             'date': schedule.date,
             'time': TimeOfDay(
@@ -263,6 +259,7 @@ class _CalendarState extends State<Calendar> {
     // Convert schedules to the format expected by _events
     List<Map<String, dynamic>> eventsList = data!
         .map((schedule) => {
+              'id': schedule.id,
               'name': schedule.name,
               'date': schedule.date,
               'time': formatTime(schedule.startTime),
@@ -554,12 +551,12 @@ class _CalendarState extends State<Calendar> {
           final desLocationName = eventDetails['destinationLocation'];
 
           final scheduledDateTime = DateTime(
-          _selectedDay.year,
-          _selectedDay.month,
-          _selectedDay.day,
-          time.hour,
-          time.minute,
-        );
+            _selectedDay.year,
+            _selectedDay.month,
+            _selectedDay.day,
+            time.hour,
+            time.minute,
+          );
 
           await _createSchedule(
             taskName,
@@ -577,7 +574,8 @@ class _CalendarState extends State<Calendar> {
             isChecked,
           );
 
-          final notificationId = DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
+          final notificationId =
+              DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
 
           await _notificationsHandler.showNotification(
             AlarmSettings(

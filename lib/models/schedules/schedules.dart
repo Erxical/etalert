@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 class Schedule {
+  final String id;
   final String name;
   final String date;
   final String startTime;
@@ -14,6 +15,7 @@ class Schedule {
   final bool isFirstSchedule;
 
   Schedule({
+    required this.id,
     required this.name,
     required this.date,
     required this.startTime,
@@ -40,6 +42,7 @@ class Schedule {
 
   factory Schedule.fromJson(Map<String, dynamic> json) {
     return Schedule(
+      id: json['Id'],
       name: json['Name'],
       date: json['Date'],
       startTime: json['StartTime'],
