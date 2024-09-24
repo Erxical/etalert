@@ -334,7 +334,7 @@ class _CalendarState extends ConsumerState<Calendar> {
         );
       },
       error: (error, stack) => Scaffold(
-        body: Center(child: Text('Error: $error')),
+        body: Center(child: Text('Error: $error Stack: $stack')),
       ),
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
