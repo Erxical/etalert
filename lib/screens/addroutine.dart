@@ -21,8 +21,10 @@ class AddRoutine extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        centerTitle: false,
         title: Text(
           'Add Routine',
+          textAlign: TextAlign.start,
           style: TextStyle(
             color: Theme.of(context).primaryColor,
             fontWeight: FontWeight.bold,
@@ -30,7 +32,7 @@ class AddRoutine extends ConsumerWidget {
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -66,20 +68,32 @@ class AddRoutine extends ConsumerWidget {
               ),
             ),
             const Spacer(),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  final taskName = taskNameController.text;
-                  final duration = durationController.text;
-                  if (taskName.isNotEmpty) {
-                    final task = Task(name: taskName, duration: duration);
-                    taskListNotifier.addTask(task);
-                    context.go('/preference/$googleId');
-                  } else {
-                    // Show error message
-                  }
-                },
-                child: const Text("Create"),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
+                      ),
+                      onPressed: () {
+                        final taskName = taskNameController.text;
+                        final duration = durationController.text;
+                        if (taskName.isNotEmpty) {
+                          final task = Task(name: taskName, duration: duration);
+                          taskListNotifier.addTask(task);
+                          context.pop();
+                        } else {
+                          // Show error message
+                        }
+                      },
+                      child: const Text("Create"),
+                    ),
+                  ),
+                ],
               ),
             ),
             // IconButton(
