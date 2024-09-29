@@ -198,7 +198,9 @@ class _CalendarState extends ConsumerState<Calendar> {
             hour: int.parse(schedule.startTime.split(':')[0]),
             minute: int.parse(schedule.startTime.split(':')[1]),
           ),
-          'endTime': schedule.endTime,
+          'endTime': TimeOfDay(
+              hour: int.parse(schedule.endTime.split(':')[0]),
+              minute: int.parse(schedule.endTime.split(':')[1])),
           'location': schedule.destinationName,
           'originLocation': schedule.originName,
         };
@@ -302,6 +304,7 @@ class _CalendarState extends ConsumerState<Calendar> {
                       _selectedDay = selectedDay;
                       _focusedDay = focusedDay;
                     });
+                    await getSchedule(formatDate(selectedDay));
                   },
                   eventLoader: (day) {
                     return _events[day]
@@ -455,7 +458,8 @@ class _CalendarState extends ConsumerState<Calendar> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Date: ${event['date']}'),
-            Text('Time: ${event['time'].format(context)}'),
+            Text(
+                'Time: ${event['time'].format(context)} - ${event['endTime'].format(context)}'),
             TextField(
               controller: originLocationController,
               style: TextStyle(

@@ -15,12 +15,7 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<List<Schedule>>> {
     state = const AsyncValue.loading();
     try {
       final schedules = await getUserSchedules(googleId);
-      if (schedules != null) {
-        state = AsyncValue.data(schedules);
-      } else {
-        state =
-            AsyncValue.error("Failed to fetch schedules", StackTrace.current);
-      }
+      state = AsyncValue.data(schedules!);
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
     }
@@ -29,7 +24,7 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<List<Schedule>>> {
   Future<void> addSchedule(ScheduleReq scheduleReq) async {
     try {
       await createSchedule(scheduleReq);
-      fetchSchedules();
+      await fetchSchedules();
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
     }
