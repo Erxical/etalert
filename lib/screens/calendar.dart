@@ -56,6 +56,7 @@ class _CalendarState extends ConsumerState<Calendar> {
     super.initState();
     _notificationsHandler.initialize();
     _setInitialLocation();
+    _initializeAlarm();
   }
 
   Future<void> _setInitialLocation() async {
@@ -145,21 +146,62 @@ class _CalendarState extends ConsumerState<Calendar> {
     }
   }
 
+  Future<void> _initializeAlarm() async {
+    await Alarm.init();
+    Alarm.ringStream.stream.listen((alarmSettings) {
+      _showAlarmDialog(alarmSettings);
+    });
+  }
+
   Future<void> setAlarm(
       int id, DateTime dateTime, String title, String body) async {
-    await Alarm.init();
-    final alarmSetting = AlarmSettings(
+    final alarmSettings = AlarmSettings(
       id: id,
       dateTime: dateTime,
       assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
       notificationTitle: title,
       notificationBody: body,
       loopAudio: true,
+      vibrate: true,
+      fadeDuration: 3.0,
       enableNotificationOnKill: true,
     );
-    await _notificationsHandler.showNotification(alarmSetting);
+    
+    await Alarm.set(alarmSettings: alarmSettings);
     print('Alarm set for $dateTime with ID $id');
   }
+
+  void _showAlarmDialog(AlarmSettings alarmSettings) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text(alarmSettings.notificationTitle),
+        content: Text(alarmSettings.notificationBody),
+        actionsAlignment: MainAxisAlignment.center, // Center the actions
+        actions: <Widget>[
+          Container(
+            width: double.infinity, // Make the button container full width
+            child: TextButton(
+              style: TextButton.styleFrom(
+                alignment: Alignment.center, // Center the text within the button
+              ),
+              child: const Text(
+                'Stop Alarm',
+                style: TextStyle(fontSize: 16), // Optional: increase text size
+              ),
+              onPressed: () {
+                Alarm.stop(alarmSettings.id);
+                Navigator.of(context).pop();
+              },
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   String formatDate(DateTime date) {
     var dateTime = date.toLocal();
@@ -599,6 +641,16 @@ class _CalendarState extends ConsumerState<Calendar> {
               enableNotificationOnKill: true,
             ),
           );
+
+          final alarmId = DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
+
+          await setAlarm(
+            alarmId,
+            scheduledDateTime,
+            taskName,
+            "Your schedule is about to start!",
+          );
+
           setState(() {});
         },
       ),
