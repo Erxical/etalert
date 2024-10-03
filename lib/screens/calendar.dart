@@ -190,18 +190,39 @@ class _CalendarState extends ConsumerState<Calendar> {
             .parse(schedule.date)
             .add(const Duration(hours: 7));
 
-        final event = {
-          'id': schedule.id,
-          'name': schedule.name,
-          'date': schedule.date,
-          'time': TimeOfDay(
-            hour: int.parse(schedule.startTime.split(':')[0]),
-            minute: int.parse(schedule.startTime.split(':')[1]),
-          ),
-          'endTime': schedule.endTime,
-          'location': schedule.destinationName,
-          'originLocation': schedule.originName,
-        };
+        schedule.endTime == "" ? schedule.startTime : schedule.endTime;
+        final event;
+
+        if (schedule.isHaveEndTime) {
+          event = {
+            'id': schedule.id,
+            'name': schedule.name,
+            'date': schedule.date,
+            'time': TimeOfDay(
+              hour: int.parse(schedule.startTime.split(':')[0]),
+              minute: int.parse(schedule.startTime.split(':')[1]),
+            ),
+            'endTime': TimeOfDay(
+                hour: int.parse(schedule.endTime!.split(':')[0]),
+                minute: int.parse(schedule.endTime!.split(':')[1])),
+            'location': schedule.destinationName,
+            'originLocation': schedule.originName,
+            'isHaveEndTime': schedule.isHaveEndTime,
+          };
+        } else {
+          event = {
+            'id': schedule.id,
+            'name': schedule.name,
+            'date': schedule.date,
+            'time': TimeOfDay(
+              hour: int.parse(schedule.startTime.split(':')[0]),
+              minute: int.parse(schedule.startTime.split(':')[1]),
+            ),
+            'location': schedule.destinationName,
+            'originLocation': schedule.originName,
+            'isHaveEndTime': schedule.isHaveEndTime,
+          };
+        }
 
         if (_events[date.toUtc()] == null) {
           _events[date.toUtc()] = [];
@@ -302,6 +323,7 @@ class _CalendarState extends ConsumerState<Calendar> {
                       _selectedDay = selectedDay;
                       _focusedDay = focusedDay;
                     });
+                    await getSchedule(formatDate(selectedDay));
                   },
                   eventLoader: (day) {
                     return _events[day]
@@ -432,22 +454,27 @@ class _CalendarState extends ConsumerState<Calendar> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(event['name'] ?? 'No name'),
-            IconButton(
-              icon: const Icon(Icons.delete), // Trash bin icon
-              onPressed: () {
-                // Remove the event
-                setState(() {
-                  if (_events[_selectedDay] != null) {
-                    _events[_selectedDay]!.remove(event);
-                    if (_events[_selectedDay]!.isEmpty) {
-                      _events.remove(_selectedDay);
-                    }
-                  }
-                });
-                Navigator.pop(context);
-              },
+            Flexible(
+              child: Text(
+                event['name'] ?? 'No name',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            // IconButton(
+            //   icon: const Icon(Icons.delete), // Trash bin icon
+            //   onPressed: () {
+            //     // Remove the event
+            //     setState(() {
+            //       if (_events[_selectedDay] != null) {
+            //         _events[_selectedDay]!.remove(event);
+            //         if (_events[_selectedDay]!.isEmpty) {
+            //           _events.remove(_selectedDay);
+            //         }
+            //       }
+            //     });
+            //     Navigator.pop(context);
+            //   },
+            // ),
           ],
         ),
         content: Column(
@@ -455,7 +482,11 @@ class _CalendarState extends ConsumerState<Calendar> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Date: ${event['date']}'),
-            Text('Time: ${event['time'].format(context)}'),
+            Text(
+                'Time: ${event['time'].format(context)} ${event['isHaveEndTime'] ? {
+                    ' - ',
+                    event['endTime'].format(context)
+                  } : ''}'),
             TextField(
               controller: originLocationController,
               style: TextStyle(

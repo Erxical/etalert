@@ -5,13 +5,14 @@ class Schedule {
   final String name;
   final String date;
   final String startTime;
-  final String endTime;
+  String? endTime;
   final bool isHaveEndTime;
   final String originName;
   final String destinationName;
   final double latitude;
   final double longtitude;
   final int groupId;
+  final int priority;
   final bool isHaveLocation;
   final bool isFirstSchedule;
 
@@ -20,13 +21,14 @@ class Schedule {
     required this.name,
     required this.date,
     required this.startTime,
-    required this.endTime,
+    this.endTime,
     required this.isHaveEndTime,
     required this.originName,
     required this.destinationName,
     required this.latitude,
     required this.longtitude,
     required this.groupId,
+    required this.priority,
     required this.isHaveLocation,
     required this.isFirstSchedule,
   });
@@ -55,6 +57,7 @@ class Schedule {
       latitude: _parseDouble(json['DestLatitude']),
       longtitude: _parseDouble(json['DestLongitude']),
       groupId: json['GroupId'],
+      priority: json['Priority'],
       isHaveLocation: json['IsHaveLocation'],
       isFirstSchedule: json['IsFirstSchedule'],
     );
