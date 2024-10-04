@@ -20,6 +20,8 @@ import 'package:geocoding/geocoding.dart';
 import 'package:timeline_tile/timeline_tile.dart';
 import 'package:frontend/services/data/schedules/get_schedules.dart';
 import 'package:frontend/screens/selectoriginlocation.dart';
+import 'package:frontend/services/notification/alarm_manager.dart';
+import 'dart:async';
 
 class Calendar extends ConsumerStatefulWidget {
   final String googleId;
@@ -172,36 +174,47 @@ class _CalendarState extends ConsumerState<Calendar> {
   }
 
   void _showAlarmDialog(AlarmSettings alarmSettings) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(alarmSettings.notificationTitle),
-        content: Text(alarmSettings.notificationBody),
-        actionsAlignment: MainAxisAlignment.center, // Center the actions
-        actions: <Widget>[
-          Container(
-            width: double.infinity, // Make the button container full width
-            child: TextButton(
-              style: TextButton.styleFrom(
-                alignment: Alignment.center, // Center the text within the button
+    final dialogCompleter = Completer<void>();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        Timer(const Duration(minutes: 2), () {
+          if (context.mounted && !dialogCompleter.isCompleted) {  // Check if context is still valid
+            Navigator.of(context).pop();
+            dialogCompleter.complete();
+          }
+        });
+        return AlertDialog(
+          title: Text(alarmSettings.notificationTitle),
+          content: Text(alarmSettings.notificationBody),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: <Widget>[
+            Container(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  alignment: Alignment.center,
+                ),
+                child: const Text(
+                  'Stop Alarm',
+                  style: TextStyle(fontSize: 16),
+                ),
+                onPressed: () {
+                  Alarm.stop(alarmSettings.id);
+                  AlarmManager.cancelAlarmTimer(alarmSettings.id);
+                  if (!dialogCompleter.isCompleted) {
+                    Navigator.of(context).pop();
+                    dialogCompleter.complete();
+                  }
+                },
               ),
-              child: const Text(
-                'Stop Alarm',
-                style: TextStyle(fontSize: 16), // Optional: increase text size
-              ),
-              onPressed: () {
-                Alarm.stop(alarmSettings.id);
-                Navigator.of(context).pop();
-              },
             ),
-          ),
-        ],
-      );
-    },
-  );
-}
+          ],
+        );
+      },
+    );
+  }
 
   String formatDate(DateTime date) {
     var dateTime = date.toLocal();
@@ -644,11 +657,12 @@ class _CalendarState extends ConsumerState<Calendar> {
 
           final alarmId = DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
 
-          await setAlarm(
-            alarmId,
-            scheduledDateTime,
-            taskName,
-            "Your schedule is about to start!",
+          await AlarmManager.setAlarmWithAutoStop(
+            id: alarmId,
+            dateTime: scheduledDateTime,
+            title: taskName,
+            body: "Your schedule is about to start!",
+            flutterLocalNotificationsPlugin: flutterLocalNotificationsPlugin,
           );
 
           setState(() {});
