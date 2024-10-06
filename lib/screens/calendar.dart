@@ -206,6 +206,7 @@ class _CalendarState extends ConsumerState<Calendar> {
             'location': schedule.destinationName,
             'originLocation': schedule.originName,
             'isHaveEndTime': schedule.isHaveEndTime,
+            'groupId': schedule.groupId,
           };
         } else {
           event = {
@@ -219,6 +220,7 @@ class _CalendarState extends ConsumerState<Calendar> {
             'location': schedule.destinationName,
             'originLocation': schedule.originName,
             'isHaveEndTime': schedule.isHaveEndTime,
+            'groupId': schedule.groupId,
           };
         }
 
@@ -464,21 +466,16 @@ class _CalendarState extends ConsumerState<Calendar> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // IconButton(
-            //   icon: const Icon(Icons.delete), // Trash bin icon
-            //   onPressed: () {
-            //     // Remove the event
-            //     setState(() {
-            //       if (_events[_selectedDay] != null) {
-            //         _events[_selectedDay]!.remove(event);
-            //         if (_events[_selectedDay]!.isEmpty) {
-            //           _events.remove(_selectedDay);
-            //         }
-            //       }
-            //     });
-            //     Navigator.pop(context);
-            //   },
-            // ),
+            IconButton(
+              icon: const Icon(Icons.delete), // Trash bin icon
+              onPressed: () async {
+                // Delete the event
+                await ref
+                    .read(scheduleProvider(widget.googleId).notifier)
+                    .deleteSchedule(event['groupId']);
+                Navigator.pop(context);
+              },
+            ),
           ],
         ),
         content: Column(
