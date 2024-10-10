@@ -346,7 +346,7 @@ class _CalendarState extends ConsumerState<Calendar> {
                     todayTextStyle: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    markersMaxCount: 2,
+                    markersMaxCount: 1,
                   ),
                   firstDay: DateTime.utc(2020, 1, 1),
                   lastDay: DateTime.utc(2030, 12, 31),
