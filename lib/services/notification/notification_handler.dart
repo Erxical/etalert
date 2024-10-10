@@ -4,8 +4,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:alarm/alarm.dart';
 
 class NotificationsHandler {
-  static final NotificationsHandler _instance =
-      NotificationsHandler._internal();
+  static final NotificationsHandler _instance = NotificationsHandler._internal();
 
   factory NotificationsHandler() {
     return _instance;
@@ -20,10 +19,6 @@ class NotificationsHandler {
     await _initializeNotifications();
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Bangkok'));
-
-    Alarm.ringStream.stream.listen((alarmSettings) {
-      showNotification(alarmSettings);
-    });
   }
 
   Future<void> _initializeNotifications() async {
@@ -40,58 +35,38 @@ class NotificationsHandler {
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        final String? payload = response.payload;
-        if (payload != null) {
-          int alarmId = int.parse(payload);
-          await Alarm.stop(alarmId);
-        }
+        await _handleNotificationAction(response);
       },
     );
 
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
+    await _setupNotificationActions();
   }
 
-  Future<void> scheduleNotification(AlarmSettings alarmSettings) async {
-    final tz.TZDateTime scheduledDate =
-        tz.TZDateTime.from(alarmSettings.dateTime, tz.local);
-
-    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
-        DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-      sound: 'mixkit_warning_alarm_buzzer_991',
+  Future<void> _setupNotificationActions() async {
+    DarwinNotificationCategory alarmCategory = DarwinNotificationCategory(
+      'ALARM_CATEGORY',
+      actions: <DarwinNotificationAction>[
+        DarwinNotificationAction.plain(
+          'STOP_ALARM',
+          'Stop Alarm',
+          options: <DarwinNotificationActionOption>{
+            DarwinNotificationActionOption.foreground,
+          },
+        ),
+      ],
     );
 
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(iOS: iOSPlatformChannelSpecifics);
+    final List<DarwinNotificationCategory> darwinNotificationCategories =
+        <DarwinNotificationCategory>[alarmCategory];
 
-    try {
-      await flutterLocalNotificationsPlugin.zonedSchedule(
-        alarmSettings.id,
-        alarmSettings.notificationTitle,
-        alarmSettings.notificationBody,
-        scheduledDate,
-        platformChannelSpecifics,
-        payload: alarmSettings.id.toString(),
-        // ignore: deprecated_member_use
-        androidAllowWhileIdle: true,
-        matchDateTimeComponents: DateTimeComponents.dateAndTime,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
-      print(
-          'Notification scheduled successfully for ${scheduledDate.toLocal()}');
-    } catch (e) {
-      print('Error scheduling notification: $e');
-    }
+    final DarwinInitializationSettings initializationSettings =
+        DarwinInitializationSettings(
+      notificationCategories: darwinNotificationCategories,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(
+      InitializationSettings(iOS: initializationSettings),
+    );
   }
 
   Future<void> showNotification(AlarmSettings alarmSettings) async {
@@ -102,8 +77,11 @@ class NotificationsHandler {
         DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
-      presentSound: true,
+      presentSound: false,
       sound: 'mixkit_warning_alarm_buzzer_991',
+      categoryIdentifier: 'ALARM_CATEGORY',
+      // This ensures the notification stays in the notification center
+      interruptionLevel: InterruptionLevel.timeSensitive,
     );
 
     const NotificationDetails platformChannelSpecifics =
@@ -117,31 +95,27 @@ class NotificationsHandler {
         scheduledDate,
         platformChannelSpecifics,
         payload: alarmSettings.id.toString(),
-        // ignore: deprecated_member_use
-        androidAllowWhileIdle: true,
-        matchDateTimeComponents: DateTimeComponents.dateAndTime,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dateAndTime,
       );
-      print('Notification shown successfully');
     } catch (e) {
       print('Error showing notification: $e');
     }
   }
 
-  Future<void> backgroundNotificationHandler(
-      NotificationResponse response) async {
+  Future<void> _handleNotificationAction(NotificationResponse response) async {
     final String? payload = response.payload;
     if (payload != null) {
       try {
         int alarmId = int.parse(payload);
-        await Alarm.stop(alarmId);
-        print('Alarm with ID $alarmId stopped.');
+        if (response.actionId == 'STOP_ALARM') {
+          await Alarm.stop(alarmId);
+          await flutterLocalNotificationsPlugin.cancel(alarmId);
+        }
       } catch (e) {
-        print('Error stopping alarm: $e');
+        print('Error handling notification action: $e');
       }
-    } else {
-      print('No payload found.');
     }
   }
 }

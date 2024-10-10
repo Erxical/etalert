@@ -18,6 +18,8 @@ import 'package:geocoding/geocoding.dart';
 import 'package:timeline_tile/timeline_tile.dart';
 import 'package:frontend/services/data/schedules/get_schedules.dart';
 import 'package:frontend/screens/selectoriginlocation.dart';
+import 'package:frontend/services/notification/alarm_manager.dart';
+import 'dart:async';
 
 class Calendar extends ConsumerStatefulWidget {
   final String googleId;
@@ -44,9 +46,6 @@ class _CalendarState extends ConsumerState<Calendar> {
   LatLng _center = const LatLng(13.6512574, 100.4938679);
   Set<Marker> _marker = {};
   late SelectedLocation destinationLocation;
-  // SelectedLocation originLocation = SelectedLocation(
-  //     locationName: 'muaymi\' home',
-  //     selectedLatLng: const LatLng(13.6337128, 100.4749808));
   final NotificationsHandler _notificationsHandler = NotificationsHandler();
 
   @override
@@ -54,6 +53,7 @@ class _CalendarState extends ConsumerState<Calendar> {
     super.initState();
     _notificationsHandler.initialize();
     _setInitialLocation();
+    _initializeAlarm();
   }
 
   Future<void> _setInitialLocation() async {
@@ -63,9 +63,6 @@ class _CalendarState extends ConsumerState<Calendar> {
     // Test if location services are enabled.
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      // Location services are not enabled don't continue
-      // accessing the position and request users of the
-      // App to enable the location services.
       return Future.error('Location services are disabled.');
     }
 
@@ -73,23 +70,15 @@ class _CalendarState extends ConsumerState<Calendar> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        // Permissions are denied, next time you could try
-        // requesting permissions again (this is also where
-        // Android's shouldShowRequestPermissionRationale
-        // returned true. According to Android guidelines
-        // your App should show an explanatory UI now.
         return Future.error('Location permissions are denied');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      // Permissions are denied forever, handle appropriately.
       return Future.error(
           'Location permissions are permanently denied, we cannot request permissions.');
     }
 
-    // When we reach here, permissions are granted and we can
-    // continue accessing the position of the device.
     Position position = await Geolocator.getCurrentPosition();
     setState(() {
       _center = LatLng(position.latitude, position.longitude);
@@ -124,17 +113,8 @@ class _CalendarState extends ConsumerState<Calendar> {
             position: latLng,
           ));
         });
-      } else {
-        // Handle geocoding failure
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Error: Could not find any result for the supplied address or coordinates.'),
-          ),
-        );
       }
     } catch (e) {
-      // Handle other exceptions
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('An error occurred. Please try again later.'),
@@ -143,20 +123,72 @@ class _CalendarState extends ConsumerState<Calendar> {
     }
   }
 
+  Future<void> _initializeAlarm() async {
+    await Alarm.init();
+    Alarm.ringStream.stream.listen((alarmSettings) {
+      _showAlarmDialog(alarmSettings);
+    });
+  }
+
   Future<void> setAlarm(
       int id, DateTime dateTime, String title, String body) async {
-    await Alarm.init();
-    final alarmSetting = AlarmSettings(
+    final alarmSettings = AlarmSettings(
       id: id,
       dateTime: dateTime,
       assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
       notificationTitle: title,
       notificationBody: body,
       loopAudio: true,
+      vibrate: true,
+      fadeDuration: 3.0,
       enableNotificationOnKill: true,
     );
-    await _notificationsHandler.showNotification(alarmSetting);
+    
+    await Alarm.set(alarmSettings: alarmSettings);
     print('Alarm set for $dateTime with ID $id');
+  }
+
+  void _showAlarmDialog(AlarmSettings alarmSettings) {
+    final dialogCompleter = Completer<void>();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        Timer(const Duration(minutes: 2), () {
+          if (context.mounted && !dialogCompleter.isCompleted) {
+            Navigator.of(context).pop();
+            dialogCompleter.complete();
+          }
+        });
+        return AlertDialog(
+          title: Text(alarmSettings.notificationTitle),
+          content: Text(alarmSettings.notificationBody),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: <Widget>[
+            Container(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  alignment: Alignment.center,
+                ),
+                child: const Text(
+                  'Stop Alarm',
+                  style: TextStyle(fontSize: 16),
+                ),
+                onPressed: () {
+                  Alarm.stop(alarmSettings.id);
+                  AlarmManager.cancelAlarmTimer(alarmSettings.id);
+                  if (!dialogCompleter.isCompleted) {
+                    Navigator.of(context).pop();
+                    dialogCompleter.complete();
+                  }
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   String formatDate(DateTime date) {
@@ -279,9 +311,9 @@ class _CalendarState extends ConsumerState<Calendar> {
     final scheduleState = ref.watch(scheduleProvider(widget.googleId));
 
     return scheduleState.when(
-      data: (schedules) {
+      data: (scheduleState) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _processSchedules(schedules);
+          _processSchedules(scheduleState.schedules);
         });
 
         return Scaffold(
@@ -295,7 +327,6 @@ class _CalendarState extends ConsumerState<Calendar> {
                       color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w600),
                 ),
-                // RoundedImage(url: data!.image)
               ],
             ),
           ),
@@ -315,7 +346,7 @@ class _CalendarState extends ConsumerState<Calendar> {
                     todayTextStyle: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    markersMaxCount: 2,
+                    markersMaxCount: 1,
                   ),
                   firstDay: DateTime.utc(2020, 1, 1),
                   lastDay: DateTime.utc(2030, 12, 31),
@@ -378,7 +409,6 @@ class _CalendarState extends ConsumerState<Calendar> {
   Widget _buildTimeline() {
     List<Map<String, dynamic>> events = _events[_selectedDay] ?? [];
 
-    // Sort events by time
     events.sort((a, b) {
       TimeOfDay timeA = a['time'];
       TimeOfDay timeB = b['time'];
@@ -469,7 +499,6 @@ class _CalendarState extends ConsumerState<Calendar> {
             IconButton(
               icon: const Icon(Icons.delete), // Trash bin icon
               onPressed: () async {
-                // Delete the event
                 await ref
                     .read(scheduleProvider(widget.googleId).notifier)
                     .deleteSchedule(event['groupId']);
@@ -488,10 +517,8 @@ class _CalendarState extends ConsumerState<Calendar> {
             TextField(
               controller: originLocationController,
               style: TextStyle(
-                fontSize: 14.0, // Set the desired font size here
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface, // Adjust text color if needed
+                fontSize: 14.0,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               decoration: const InputDecoration(
                 labelText: 'Start from?',
@@ -504,14 +531,11 @@ class _CalendarState extends ConsumerState<Calendar> {
               maxLines: null,
             ),
             const SizedBox(height: 16),
-            // Text field for editing location
             TextField(
               controller: locationController,
               style: TextStyle(
-                fontSize: 14.0, // Set the desired font size here
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface, // Adjust text color if needed
+                fontSize: 14.0,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               decoration: const InputDecoration(
                 labelText: 'Where to?',
@@ -532,7 +556,6 @@ class _CalendarState extends ConsumerState<Calendar> {
           ),
           TextButton(
             onPressed: () {
-              // Save the updated location
               setState(() {
                 event['location'] = locationController.text;
                 event['originLocation'] = originLocationController.text;
@@ -583,20 +606,31 @@ class _CalendarState extends ConsumerState<Calendar> {
             isChecked,
           );
 
-          final notificationId =
-              DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
+          // final notificationId =
+          //     DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
 
-          await _notificationsHandler.showNotification(
-            AlarmSettings(
-              id: notificationId,
-              dateTime: scheduledDateTime,
-              notificationTitle: taskName,
-              notificationBody: "Your schedule is about to start!",
-              assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
-              loopAudio: true,
-              enableNotificationOnKill: true,
-            ),
-          );
+          // await _notificationsHandler.showNotification(
+          //   AlarmSettings(
+          //     id: notificationId,
+          //     dateTime: scheduledDateTime,
+          //     notificationTitle: taskName,
+          //     notificationBody: "Your schedule is about to start!",
+          //     assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
+          //     loopAudio: true,
+          //     enableNotificationOnKill: true,
+          //   ),
+          // );
+
+          // final alarmId = DateTime.now().millisecondsSinceEpoch % 0x7FFFFFFF;
+
+          // await AlarmManager.setAlarmWithAutoStop(
+          //   id: alarmId,
+          //   dateTime: scheduledDateTime,
+          //   title: taskName,
+          //   body: "Your schedule is about to start!",
+          //   flutterLocalNotificationsPlugin: flutterLocalNotificationsPlugin,
+          // );
+
           setState(() {});
         },
       ),
