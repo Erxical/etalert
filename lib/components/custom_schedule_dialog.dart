@@ -25,8 +25,8 @@ class _ScheduleDialogState extends State<ScheduleDialog> {
   TextEditingController locationController = TextEditingController();
   TextEditingController originLocationController = TextEditingController();
   bool isChecked = false;
-  late SelectedLocation originLocation;
-  late SelectedLocation destinationLocation;
+  SelectedLocation originLocation = SelectedLocation();
+  SelectedLocation destinationLocation = SelectedLocation();
 
   @override
   void initState() {

@@ -8,8 +8,6 @@ import 'package:frontend/models/schedules/schedule_req.dart';
 import 'package:frontend/models/schedules/schedules.dart';
 import 'package:frontend/models/user/user_info.dart';
 import 'package:frontend/providers/schedule_provider.dart';
-import 'package:frontend/services/data/schedules/create_schedule.dart';
-import 'package:frontend/services/data/schedules/get_user_schedules.dart';
 import 'package:frontend/services/notification/notification_handler.dart';
 import 'package:frontend/screens/selectlocation.dart';
 import 'package:intl/intl.dart';
@@ -208,6 +206,7 @@ class _CalendarState extends ConsumerState<Calendar> {
             'location': schedule.destinationName,
             'originLocation': schedule.originName,
             'isHaveEndTime': schedule.isHaveEndTime,
+            'groupId': schedule.groupId,
           };
         } else {
           event = {
@@ -221,6 +220,7 @@ class _CalendarState extends ConsumerState<Calendar> {
             'location': schedule.destinationName,
             'originLocation': schedule.originName,
             'isHaveEndTime': schedule.isHaveEndTime,
+            'groupId': schedule.groupId,
           };
         }
 
@@ -238,16 +238,22 @@ class _CalendarState extends ConsumerState<Calendar> {
     String date,
     String startTime,
     String? endTime,
-    String oriName,
-    double orilat,
-    double orilng,
-    String desName,
-    double deslat,
-    double deslng,
+    String? oriName,
+    double? orilat,
+    double? orilng,
+    String? desName,
+    double? deslat,
+    double? deslng,
     bool isFirstSchedule,
     DateTime selectedDay,
     bool isTraveling,
   ) async {
+    final bool isHaveLocation = oriName != null &&
+        desName != null &&
+        orilat != null &&
+        orilng != null &&
+        deslat != null &&
+        deslng != null;
     final req = ScheduleReq(
       googleId: widget.googleId,
       name: scheduleName,
@@ -261,7 +267,7 @@ class _CalendarState extends ConsumerState<Calendar> {
       desName: desName,
       destLatitude: deslat,
       destLongtitude: deslng,
-      isHaveLocation: true,
+      isHaveLocation: isHaveLocation,
       isFirstSchedule: isFirstSchedule,
       isTraveling: isTraveling,
     );
@@ -460,21 +466,16 @@ class _CalendarState extends ConsumerState<Calendar> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // IconButton(
-            //   icon: const Icon(Icons.delete), // Trash bin icon
-            //   onPressed: () {
-            //     // Remove the event
-            //     setState(() {
-            //       if (_events[_selectedDay] != null) {
-            //         _events[_selectedDay]!.remove(event);
-            //         if (_events[_selectedDay]!.isEmpty) {
-            //           _events.remove(_selectedDay);
-            //         }
-            //       }
-            //     });
-            //     Navigator.pop(context);
-            //   },
-            // ),
+            IconButton(
+              icon: const Icon(Icons.delete), // Trash bin icon
+              onPressed: () async {
+                // Delete the event
+                await ref
+                    .read(scheduleProvider(widget.googleId).notifier)
+                    .deleteSchedule(event['groupId']);
+                Navigator.pop(context);
+              },
+            ),
           ],
         ),
         content: Column(
@@ -483,10 +484,7 @@ class _CalendarState extends ConsumerState<Calendar> {
           children: [
             Text('Date: ${event['date']}'),
             Text(
-                'Time: ${event['time'].format(context)} ${event['isHaveEndTime'] ? {
-                    ' - ',
-                    event['endTime'].format(context)
-                  } : ''}'),
+                'Time: ${event['time'].format(context)} ${event['isHaveEndTime'] ? '- ' + event['endTime'].format(context) : ''}'),
             TextField(
               controller: originLocationController,
               style: TextStyle(
