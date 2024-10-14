@@ -159,20 +159,23 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
       // Step 1: Create the schedule
       await createSchedule(scheduleReq);
 
-      // Step 2: Fetch backend schedules related to the new schedule
+      // Step 2: Set alarm for the user-created schedule
+      await _setNotificationAndAlarmFromRequest(scheduleReq, autoStop: false);
+
+      // Step 3: Fetch backend schedules related to the new schedule
       final relatedBackendSchedules =
           await getAllSchedules(googleId, scheduleReq.date);
 
       if (relatedBackendSchedules != null &&
           relatedBackendSchedules.isNotEmpty) {
         for (final backendSchedule in relatedBackendSchedules) {
-          // Set alarms for the new backend schedules
-          await _setNotificationAndAlarm(backendSchedule);
+          // Set alarms only for backend schedules that don't match the user-created one
+          if (backendSchedule.name != scheduleReq.name ||
+              backendSchedule.startTime != scheduleReq.startTime) {
+            await _setNotificationAndAlarm(backendSchedule, autoStop: false);
+          }
         }
       }
-
-      // Step 3: Set alarm for the user-created schedule
-      await _setNotificationAndAlarmFromRequest(scheduleReq);
 
       // Step 4: Refresh all schedules after adding
       await fetchAllSchedules();
@@ -182,7 +185,8 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
     }
   }
 
-  Future<void> _setNotificationAndAlarm(Schedule schedule, {bool autoStop = false}) async {
+  Future<void> _setNotificationAndAlarm(Schedule schedule,
+      {bool autoStop = false}) async {
     try {
       final date = DateFormat('dd-MM-yyyy').parse(schedule.date);
       final time = schedule.startTime.split(':');
@@ -209,7 +213,8 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
     }
   }
 
-  Future<void> _setNotificationAndAlarmFromRequest(ScheduleReq scheduleReq, {bool autoStop = false}) async {
+  Future<void> _setNotificationAndAlarmFromRequest(ScheduleReq scheduleReq,
+      {bool autoStop = false}) async {
     final date = DateFormat('dd-MM-yyyy').parse(scheduleReq.date);
     final time = scheduleReq.startTime.split(':');
     final scheduledDateTime = DateTime(
@@ -239,13 +244,12 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
     required String body,
     bool autoStop = false,
   }) async {
-    // Set up the notification
     await _notificationsHandler.showNotification(
       AlarmSettings(
         id: id,
         dateTime: dateTime,
         notificationTitle: title,
-        notificationBody: "Your schedule '$title' is about to start!",
+        notificationBody: body,
         assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
         loopAudio: true,
         vibrate: true,
@@ -253,10 +257,9 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
       ),
     );
 
-    // Set up the alarm
     if (autoStop) {
       await AlarmManager.setAlarmWithAutoStop(
-        id: id + 1, // Use a different ID for the alarm
+        id: id,
         dateTime: dateTime,
         title: title,
         body: body,
@@ -264,7 +267,7 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
       );
     } else {
       await AlarmManager.setAlarmWithSound(
-        id: id + 1, // Use a different ID for the alarm
+        id: id,
         dateTime: dateTime,
         title: title,
         body: body,
