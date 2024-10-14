@@ -43,6 +43,11 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
 
   ScheduleNotifier(this.googleId) : super(const AsyncValue.loading()) {
     fetchAllSchedules();
+    _initializeAlarm();
+  }
+
+  Future<void> _initializeAlarm() async {
+    await Alarm.init();
   }
 
   Map<DateTime, List<Schedule>> _organizeSchedulesByDate(
@@ -161,21 +166,23 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
       if (relatedBackendSchedules != null &&
           relatedBackendSchedules.isNotEmpty) {
         for (final backendSchedule in relatedBackendSchedules) {
-          // Set alarms only if the schedule is not already set
+          // Set alarms for the new backend schedules
           await _setNotificationAndAlarm(backendSchedule);
         }
       }
 
-      // Step 3: Refresh all schedules after adding (to ensure UI updates properly)
+      // Step 3: Set alarm for the user-created schedule
+      await _setNotificationAndAlarmFromRequest(scheduleReq);
+
+      // Step 4: Refresh all schedules after adding
       await fetchAllSchedules();
     } catch (e, stackTrace) {
-      // Handle errors gracefully
       print('Error while adding schedule: $e');
       state = AsyncValue.error(e, stackTrace);
     }
   }
 
-  Future<void> _setNotificationAndAlarm(Schedule schedule) async {
+  Future<void> _setNotificationAndAlarm(Schedule schedule, {bool autoStop = false}) async {
     try {
       final date = DateFormat('dd-MM-yyyy').parse(schedule.date);
       final time = schedule.startTime.split(':');
@@ -188,40 +195,21 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
       );
 
       if (scheduledDateTime.isAfter(DateTime.now())) {
-        final notificationId = schedule.id.hashCode % 0x7FFFFFFF;
-
-        // Setting the notification
-        await _notificationsHandler.showNotification(
-          AlarmSettings(
-            id: notificationId,
-            dateTime: scheduledDateTime,
-            notificationTitle: schedule.name,
-            notificationBody:
-                "Your schedule '${schedule.name}' is about to start!",
-            assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
-            loopAudio: true,
-            enableNotificationOnKill: true,
-          ),
-        );
-
-        // Setting the alarm
-        final alarmId = (schedule.id.hashCode + 1) % 0x7FFFFFFF;
-        await AlarmManager.setAlarmWithAutoStop(
+        final alarmId = schedule.id.hashCode % 0x7FFFFFFF;
+        await _setAlarm(
           id: alarmId,
           dateTime: scheduledDateTime,
           title: schedule.name,
           body: "Your schedule '${schedule.name}' is starting now!",
-          flutterLocalNotificationsPlugin: _flutterLocalNotificationsPlugin,
+          autoStop: autoStop,
         );
       }
     } catch (e) {
       print('Error while setting notification or alarm: $e');
-      // Handle errors gracefully to avoid crashing the app
     }
   }
 
-  Future<void> _setNotificationAndAlarmFromRequest(
-      ScheduleReq scheduleReq) async {
+  Future<void> _setNotificationAndAlarmFromRequest(ScheduleReq scheduleReq, {bool autoStop = false}) async {
     final date = DateFormat('dd-MM-yyyy').parse(scheduleReq.date);
     final time = scheduleReq.startTime.split(':');
     final scheduledDateTime = DateTime(
@@ -233,29 +221,53 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
     );
 
     if (scheduledDateTime.isAfter(DateTime.now())) {
-      final notificationId =
-          scheduledDateTime.millisecondsSinceEpoch % 0x7FFFFFFF;
-      await _notificationsHandler.showNotification(
-        AlarmSettings(
-          id: notificationId,
-          dateTime: scheduledDateTime,
-          notificationTitle: scheduleReq.name,
-          notificationBody:
-              "Your schedule '${scheduleReq.name}' is about to start!",
-          assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
-          loopAudio: true,
-          enableNotificationOnKill: true,
-        ),
-      );
-
-      final alarmId =
-          (scheduledDateTime.millisecondsSinceEpoch + 1) % 0x7FFFFFFF;
-      await AlarmManager.setAlarmWithAutoStop(
+      final alarmId = scheduledDateTime.millisecondsSinceEpoch % 0x7FFFFFFF;
+      await _setAlarm(
         id: alarmId,
         dateTime: scheduledDateTime,
         title: scheduleReq.name,
         body: "Your schedule '${scheduleReq.name}' is starting now!",
+        autoStop: autoStop,
+      );
+    }
+  }
+
+  Future<void> _setAlarm({
+    required int id,
+    required DateTime dateTime,
+    required String title,
+    required String body,
+    bool autoStop = false,
+  }) async {
+    // Set up the notification
+    await _notificationsHandler.showNotification(
+      AlarmSettings(
+        id: id,
+        dateTime: dateTime,
+        notificationTitle: title,
+        notificationBody: "Your schedule '$title' is about to start!",
+        assetAudioPath: 'assets/mixkit-warning-alarm-buzzer-991.mp3',
+        loopAudio: true,
+        vibrate: true,
+        enableNotificationOnKill: true,
+      ),
+    );
+
+    // Set up the alarm
+    if (autoStop) {
+      await AlarmManager.setAlarmWithAutoStop(
+        id: id + 1, // Use a different ID for the alarm
+        dateTime: dateTime,
+        title: title,
+        body: body,
         flutterLocalNotificationsPlugin: _flutterLocalNotificationsPlugin,
+      );
+    } else {
+      await AlarmManager.setAlarmWithSound(
+        id: id + 1, // Use a different ID for the alarm
+        dateTime: dateTime,
+        title: title,
+        body: body,
       );
     }
   }
@@ -263,6 +275,8 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<ScheduleState>> {
   Future<void> deleteSchedule(int groupId) async {
     try {
       await deleteSchedules(groupId);
+      // Stop the alarm and cancel the timer when deleting a schedule
+      await AlarmManager.stopAlarm(groupId);
       await fetchAllSchedules();
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
