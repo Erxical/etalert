@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/schedules/schedules.dart';
 import 'package:frontend/services/data/schedules/delete_schedule.dart';
+import 'package:frontend/services/data/schedules/edit_schedule.dart';
 import 'package:frontend/services/data/schedules/get_user_schedules.dart';
 import 'package:frontend/services/data/schedules/create_schedule.dart';
 import 'package:frontend/models/schedules/schedule_req.dart';
@@ -32,8 +33,20 @@ class ScheduleNotifier extends StateNotifier<AsyncValue<List<Schedule>>> {
   }
 
   Future<void> deleteSchedule(int groupId) async {
+    state = const AsyncValue.loading();
     try {
       await deleteSchedules(groupId);
+      await fetchSchedules();
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  Future<void> editSchedule(String scheduleId, String name, String date,
+      String startTime, String endTime, bool isHaveEndTime) async {
+    try {
+      await editScheduleService(
+          scheduleId, name, date, startTime, endTime, isHaveEndTime);
       await fetchSchedules();
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
