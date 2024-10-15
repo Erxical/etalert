@@ -158,10 +158,10 @@ class Preference extends ConsumerWidget {
           onPressed: () async {
             for (int i = 0; i < tasks.length; i++) {
               int dur = int.parse(tasks[i].duration);
-              await createRoutine(googleId, tasks[i].name, dur, i);
+              await createRoutine(googleId, tasks[i].name, dur, i + 1);
             }
 
-            context.go('/');
+            context.go('/$googleId');
           },
           child: const Text(
             'Finish',
